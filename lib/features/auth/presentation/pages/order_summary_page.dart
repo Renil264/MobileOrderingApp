@@ -429,26 +429,25 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     );
   }
 
-  Widget _actionButton(String text, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(text,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                )),
-            const SizedBox(width: 6),
-            Icon(icon, size: 16),
-          ],
-        ),
+  Widget _actionButton(String text, IconData icon){
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12)
       ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+           text,
+           style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 6),
+          Icon(icon, size: 16),
+        ],
+      ),
+
     );
   }
 
