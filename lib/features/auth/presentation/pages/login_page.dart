@@ -55,9 +55,6 @@ class LoginPage extends StatelessWidget {
 
           // 3️⃣ CONTENT (FULL HEIGHT + SCROLL SAFE)
           SafeArea(
-            child: SizedBox(
-              width: size.width,
-              height: size.height,
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: ConstrainedBox(
@@ -74,7 +71,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
