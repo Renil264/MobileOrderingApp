@@ -62,7 +62,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 12),
         SocialLoginButton.google(),
         const SizedBox(height: 12),
-        SocialLoginButton.apple(),
+        // SocialLoginButton.apple(),
 
         const SizedBox(height: 22),
 

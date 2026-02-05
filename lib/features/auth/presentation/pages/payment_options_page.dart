@@ -60,11 +60,11 @@ class _PaymentOptionsDialogState extends State<PaymentOptionsDialog> {
 
             const SizedBox(height: 20),
 
-            _buildPaymentButton(
-              svgPath: 'assets/apple.svg',
-              label: "Apple Pay",
-              paymentMethod: 'apple',
-            ),
+            // _buildPaymentButton(
+            //   svgPath: 'assets/apple.svg',
+            //   label: "Apple Pay",
+            //   paymentMethod: 'apple',
+            // ),
 
             const SizedBox(height: 12),
 

@@ -40,7 +40,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     'Desserts',
   ];
 
-  // 🍔 Sample menu items
+  final Map<String, bool> _likedItems = {};
+
   final List<MenuItem> menuItems = [
     MenuItem(
       name: 'Choclate Muffins',
@@ -109,16 +110,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
           ),
         ],
       ),
-      bottomNavigationBar: MainBottomNav(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() => currentIndex = index);
-        },
-      ),
     );
   }
 
-  // 🟧 HEADER
   Widget _header(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
@@ -208,7 +202,6 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     );
   }
 
-  // 🎯 CATEGORIES SECTION
   Widget _categorySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +232,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     );
   }
 
-  // 🍽️ CATEGORY ITEM
+
   Widget _categoryItem(int index) {
     final isSelected = selectedCategory == index;
     return GestureDetector(
@@ -289,189 +282,158 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     );
   }
 
-  // 🍔 MENU ITEM CARD - FULLY RESPONSIVE
-  Widget _menuItemCard(MenuItem item) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate responsive dimensions based on card width
-        final cardWidth = constraints.maxWidth;
-        final cardHeight = constraints.maxHeight;
-        
-        // Image should take approximately 55% of card height
-        final imageHeight = cardHeight * 0.55;
-        
-        // Content section takes the remaining 45%
-        final contentHeight = cardHeight * 0.45;
-        
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                spreadRadius: 0,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Image with Favorite Icon
-              SizedBox(
-                height: imageHeight,
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+Widget _menuItemCard(MenuItem item) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final cardHeight = constraints.maxHeight;
+      final imageHeight = cardHeight * 0.52;
+
+      final isTablet = MediaQuery.of(context).size.width >= 600;
+      final titleFont = isTablet ? 16.0 : 14.0;
+      final priceFont = isTablet ? 16.0 : 14.0;
+      final buttonFont = isTablet ? 15.0 : 14.0;
+
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // IMAGE
+            SizedBox(
+              height: imageHeight,
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: Image.asset(
+                  item.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) {
+                    return Container(
+                      color: Colors.grey.shade300,
+                      child: Icon(
+                        Icons.fastfood,
+                        size: isTablet ? 60 : 48,
+                        color: Colors.grey.shade500,
                       ),
-                      child: Image.asset(
-                        item.image,
-                        height: imageHeight,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: imageHeight,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // CONTENT
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(isTablet ? 14 : 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // NAME + PRICE + LIKE
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // NAME
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: titleFont,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        // PRICE + LIKE
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '\$${item.price.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: priceFont,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            child: Icon(
-                              Icons.fastfood,
-                              size: 50,
-                              color: Colors.grey.shade500,
+                            const SizedBox(height: 2),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _likedItems[item.name] =
+                                      !(_likedItems[item.name] ?? false);
+                                });
+                              },
+                              child: Icon(
+                                Icons.favorite,
+                                size: isTablet ? 19 : 17,
+                                color: (_likedItems[item.name] ?? false)
+                                    ? Colors.red
+                                    : Colors.grey.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    // ADD BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const OrderSummaryPage(),
                             ),
                           );
                         },
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: AppColors.gradientTop,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite_border,
-                          color: Colors.white,
-                          size: 16,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            vertical: isTablet ? 11 : 11,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gradientTop,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              'ADD',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: buttonFont,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              
-              // Product Details - Fixed height for consistent alignment
-              SizedBox(
-                height: contentHeight,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Product Name and Price Section
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Product Name
-                            Text(
-                              item.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                height: 1.2,
-                                color: Colors.black87,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            
-                            // Price
-                            Text(
-                              '\$${item.price.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      // Buttons Row - Always at bottom with consistent spacing
-                      Row(
-                        children: [
-                          // Shopping Bag Button
-                          Container(
-                            padding: const EdgeInsets.all(9),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4C1D95),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.shopping_bag_outlined,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          
-                          // ADD Button
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const OrderSummaryPage(),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gradientTop,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'ADD',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 }

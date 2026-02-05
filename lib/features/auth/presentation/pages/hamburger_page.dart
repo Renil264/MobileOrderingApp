@@ -13,9 +13,9 @@ class HamburgerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Drawer(
-      width: screenWidth * 0.7, 
+      width: screenWidth * 0.7,
       child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -28,7 +28,7 @@ class HamburgerPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with Profile info
+              // ================= HEADER =================
               Padding(
                 padding: EdgeInsets.all(screenWidth * 0.06),
                 child: Row(
@@ -70,8 +70,7 @@ class HamburgerPage extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(height: screenWidth * 0.03),
-              // Menu Items
+
               Expanded(
                 child: Container(
                   decoration: const BoxDecoration(
@@ -81,123 +80,130 @@ class HamburgerPage extends StatelessWidget {
                       topRight: Radius.circular(30),
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      SizedBox(height: screenWidth * 0.06),
-                      _drawerMenuItem(
-                        context,
-                        icon: Icons.store,
-                        title: 'Switch Market',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SwitchMarketPage(),
-                            ),
-                          );
-                          // Add navigation logic
-                        },
-                      ),
-                      _drawerMenuItem(
-                        context,
-                        icon: Icons.description,
-                        title: 'Personal Details',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const PersonalDetailsScreen(),
-                            ),
-                          );
-                          // Add navigation logic
-                        },
-                      ),
-                      _drawerMenuItem(
-                        context,
-                        icon: Icons.description,
-                        title: 'Change Password',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ChangePasswordScreen(),
-                            ),
-                          );
-                          // Add navigation logic
-                        },
-                      ),
-                      _drawerMenuItem(
-                        context,
-                        icon: Icons.receipt_long,
-                        title: 'My Orders',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MyOrdersPage(),
-                            ),
-                          );
-                          // Add navigation logic
-                        },
-                      ),
-                      _drawerMenuItem(
-                        context,
-                        icon: Icons.description,
-                        title: 'Terms and conditions',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const PrivacyPolicyPage(),
-                            ),
-                          );
-                          // Add navigation logic
-                        },
-                      ),
-                      const Spacer(),
-                      // Logout Button
-                      Padding(
-                        padding: EdgeInsets.all(screenWidth * 0.06),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              _showLogoutDialog(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                vertical: screenWidth * 0.04,
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.only(bottom: screenWidth * 0.05),
+                    child: Column(
+                      children: [
+                        SizedBox(height: screenWidth * 0.06),
+
+                        _drawerMenuItem(
+                          context,
+                          icon: Icons.store,
+                          title: 'Switch Market',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SwitchMarketPage(),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            );
+                          },
+                        ),
+
+                        _drawerMenuItem(
+                          context,
+                          icon: Icons.person_outline,
+                          title: 'Personal Details',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const PersonalDetailsScreen(),
                               ),
-                              elevation: 0,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.logout,
-                                  size: screenWidth * 0.05,
-                                  color: Colors.white,
+                            );
+                          },
+                        ),
+
+                        _drawerMenuItem(
+                          context,
+                          icon: Icons.lock_outline,
+                          title: 'Change Password',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ChangePasswordScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        _drawerMenuItem(
+                          context,
+                          icon: Icons.receipt_long,
+                          title: 'My Orders',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MyOrdersPage(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        _drawerMenuItem(
+                          context,
+                          icon: Icons.description_outlined,
+                          title: 'Terms and Conditions',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const PrivacyPolicyPage(),
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        Padding(
+                          padding: EdgeInsets.all(screenWidth * 0.06),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showLogoutDialog(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  vertical: screenWidth * 0.04,
                                 ),
-                                SizedBox(width: screenWidth * 0.02),
-                                Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.bold,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.logout,
+                                    size: screenWidth * 0.05,
+                                    color: Colors.white,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: screenWidth * 0.02),
+                                  Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      fontSize: screenWidth * 0.04,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -215,7 +221,7 @@ class HamburgerPage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.06,
@@ -232,7 +238,7 @@ class HamburgerPage extends StatelessWidget {
               vertical: screenWidth * 0.035,
             ),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -247,7 +253,6 @@ class HamburgerPage extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      color: Colors.black87,
                       fontSize: screenWidth * 0.037,
                       fontWeight: FontWeight.w500,
                     ),
@@ -255,7 +260,7 @@ class HamburgerPage extends StatelessWidget {
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: Colors.grey[400],
+                  color: Colors.grey,
                   size: screenWidth * 0.055,
                 ),
               ],
@@ -266,59 +271,50 @@ class HamburgerPage extends StatelessWidget {
     );
   }
 
+  // ================= LOGOUT DIALOG =================
   void _showLogoutDialog(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'Logout',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: screenWidth * 0.05,
           ),
-          title: Text(
-            'Logout',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: screenWidth * 0.05,
-            ),
+        ),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(fontSize: screenWidth * 0.04),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          content: Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(fontSize: screenWidth * 0.04),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: screenWidth * 0.04,
-                ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            child: const Text(
+              'Logout',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (route) => false, //
-                );
-              },
-              child: Text(
-                'Logout',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: screenWidth * 0.04,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 }
