@@ -15,6 +15,18 @@ class SocialLoginButton extends StatelessWidget {
     this.outlined = false,
   });
 
+    factory SocialLoginButton.google() {
+    return SocialLoginButton(
+      backgroundColor: Colors.transparent,
+      outlined: true,
+      icon: Image.asset(
+        'assets/google.png',
+        height: 20,
+      ),
+      text: 'Continue with Google',
+    );
+  }
+
   factory SocialLoginButton.facebook() {
     return SocialLoginButton(
       backgroundColor: AppColors.facebookBlue,
@@ -28,18 +40,6 @@ class SocialLoginButton extends StatelessWidget {
         child: const Icon(Icons.facebook, color: AppColors.facebookBlue, size: 18),
       ),
       text: 'Continue with Facebook',
-    );
-  }
-
-  factory SocialLoginButton.google() {
-    return SocialLoginButton(
-      backgroundColor: Colors.transparent,
-      outlined: true,
-      icon: Image.asset(
-        'assets/google.png',
-        height: 20,
-      ),
-      text: 'Continue with Google',
     );
   }
 

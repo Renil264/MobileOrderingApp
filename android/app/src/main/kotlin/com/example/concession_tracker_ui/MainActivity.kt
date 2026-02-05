@@ -1,4 +1,4 @@
-package com.example.concession_tracker_ui
+package com.esoftsys.concessiontrackerapp
 
 import io.flutter.embedding.android.FlutterActivity
 

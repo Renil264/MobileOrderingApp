@@ -199,8 +199,6 @@ class _SignUpFormState extends State<SignUpForm> {
             _socialIcon('assets/google.png'),
             const SizedBox(width: 16),
             _socialIcon('assets/facebook.png'),
-            const SizedBox(width: 16),
-            _socialIcon('assets/apple.png'),
           ],
         ),
       ],

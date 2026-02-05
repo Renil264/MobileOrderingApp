@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "607534108011",
+    "project_id": "concessiontrackerapp",
+    "storage_bucket": "concessiontrackerapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:607534108011:android:d470776b8ef2dce0abd02e",
+        "android_client_info": {
+          "package_name": "com.esoftsys.concessiontrackerapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWXW0O3uNexs-Cz9JArAqINa1zu7VwGiM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
