@@ -12,7 +12,20 @@
           "package_name": "com.esoftsys.concessiontrackerapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "607534108011-pq8o1cpdmqtsrajiscgmogqol9sj0f2k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.esoftsys.concessiontrackerapp",
+            "certificate_hash": "9748373ac54e5b3eaa3af985964051a27e9e739b"
+          }
+        },
+        {
+          "client_id": "607534108011-hv9sdq6abqsp7dk96h17b9cle4gpthqp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAWXW0O3uNexs-Cz9JArAqINa1zu7VwGiM"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "607534108011-hv9sdq6abqsp7dk96h17b9cle4gpthqp.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "607534108011-1k3pe0cifhossddp5v7r1lomkdjn5ebj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.esoftsys.concessiontrackerapp"
+              }
+            }
+          ]
         }
       }
     }
