@@ -67,7 +67,7 @@
 	</array>
 
 	<!-- ========================= -->
-	<!-- 🔐 GOOGLE SIGN-IN (REQUIRED) -->
+	<!-- 🔐 GOOGLE SIGN-IN CONFIG -->
 	<!-- ========================= -->
 
 	<key>CFBundleURLTypes</key>
@@ -77,25 +77,28 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- 🔴 REPLACE THIS WITH REVERSED_CLIENT_ID -->
 				<string>com.googleusercontent.apps.607534108011-1k3pe0cifhossddp5v7r1lomkdjn5ebj</string>
 			</array>
 		</dict>
 	</array>
 
-	<!-- Allow Google Sign-In to open browser -->
+	<!-- Query Schemes for Google Sign-In -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>googlegmail</string>
+		<string>googlemail</string>
 		<string>google</string>
-		<string>com.googleusercontent.apps</string>
 	</array>
 
 	<!-- ========================= -->
-	<!-- 🔥 FIREBASE (SAFE DEFAULTS) -->
+	<!-- 🔥 FIREBASE CONFIG -->
 	<!-- ========================= -->
 
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
+
+	<key>FirebaseAutomaticScreenReportingEnabled</key>
+	<false/>
 
 </dict>
 </plist>
