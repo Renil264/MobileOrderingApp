@@ -21,48 +21,54 @@ class _LoginFormState extends State<LoginForm> {
 
   // Google Sign-In Handler
   Future<void> _handleGoogleSignIn() async {
-    if (_isGoogleLoading) return;
+  if (_isGoogleLoading) return;
 
-    setState(() => _isGoogleLoading = true);
+  setState(() => _isGoogleLoading = true);
 
-    try {
-      final user = await _authService.signInWithGoogle();
+  try {
+    final user = await _authService.signInWithGoogle();
 
+    if (!mounted) return;
+
+    if (user != null) {
+      // ✅ Add a small delay to ensure Firebase auth state updates
+      await Future.delayed(const Duration(milliseconds: 300));
+      
       if (!mounted) return;
-
-      if (user != null) {
-        // ✅ Navigate to SelectMarketPage after successful login
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const SelectMarketPage()),
-        );
-      } else {
-        // User cancelled the sign-in
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign-in cancelled'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+      );
+    } else {
+      // User cancelled
       if (!mounted) return;
-
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google Sign-in failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+        const SnackBar(
+          content: Text('Sign-in cancelled'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isGoogleLoading = false);
-      }
+    }
+  } catch (e) {
+    if (!mounted) return;
+
+    debugPrint('Google Sign-In Error: $e'); // Add this for debugging
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Sign-in failed: ${e.toString().replaceAll('Exception: ', '')}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _isGoogleLoading = false);
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -281,6 +287,8 @@ class _LoginFormState extends State<LoginForm> {
       ),
     );
   }
+
+
 
   Widget _divider() {
     return const Row(
