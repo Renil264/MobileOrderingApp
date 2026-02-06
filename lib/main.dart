@@ -1,12 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'firebase_options.dart';
 
-
 Future<void> main() async {
+  // Capture any errors that occur during initialization
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter Error: ${details.exception}');
+    debugPrint('Stack trace: ${details.stack}');
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
+  
+  debugPrint('🚀 App starting...');
   
   // Set system UI styles
   SystemChrome.setEnabledSystemUIMode(
@@ -25,17 +34,20 @@ Future<void> main() async {
   
   // Initialize Firebase with error handling
   try {
+    debugPrint('🔥 Initializing Firebase...');
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } catch (e) {
-    debugPrint('Firebase initialization error: $e');
+    debugPrint('✅ Firebase initialized successfully');
+  } catch (e, stackTrace) {
+    debugPrint('❌ Firebase initialization failed: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Don't throw - let app run to show error to user
   }
   
-  // Call runApp() only ONCE
+  debugPrint('🎨 Starting app...');
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

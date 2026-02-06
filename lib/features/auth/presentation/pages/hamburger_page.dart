@@ -4,6 +4,7 @@ import 'package:concession_tracker_ui/features/auth/presentation/pages/myorders.
 import 'package:concession_tracker_ui/features/auth/presentation/pages/personaldetails.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/switch_market_page.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/termsandconditions.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/widgets/login_form.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
@@ -167,8 +168,13 @@ class HamburgerPage extends StatelessWidget {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.pop(context);
-                                _showLogoutDialog(context);
+                                final rootContext = Navigator.of(context).context;
+
+                                Navigator.of(context).pop(); // close drawer
+
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  _showLogoutDialog(rootContext);
+                                });
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
