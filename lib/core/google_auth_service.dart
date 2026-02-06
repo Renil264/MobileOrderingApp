@@ -16,7 +16,7 @@ class GoogleAuthService {
       scopes: ['email'],
       // ⚠️ ADD THIS: Use your Web Client ID from Firebase Console
       serverClientId: Platform.isIOS 
-          ? '607534108011-pq8o1cpdmqtsrajiscgmogqol9sj0f2k.apps.googleusercontent.com' 
+          ? '607534108011-p05v91hks7g51haa23u4ugtjcmc7mtrc.apps.googleusercontent.com' 
           : null,
     );
     
