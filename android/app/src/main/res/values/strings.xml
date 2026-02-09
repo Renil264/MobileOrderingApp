@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App Name -->
+    <string name="app_name">Concession Tracker</string>
+
+    <!-- Facebook Configuration -->
+    <!-- Replace values with YOUR actual Facebook app details -->
+    <string name="facebook_app_id">25894090463617431</string>
+    <string name="facebook_client_token">26a63f3580c4d0eea05a93aeed7c7529</string>
+
+    <!-- Facebook SDK internal strings (DO NOT CHANGE) -->
+    <string name="facebook_login_protocol_scheme">
+        fb25894090463617431
+    </string>
+
+</resources>

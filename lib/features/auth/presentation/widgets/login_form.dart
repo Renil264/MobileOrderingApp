@@ -1,11 +1,12 @@
+import 'package:concession_tracker_ui/core/facebook_auth_service.dart';
 import 'package:concession_tracker_ui/core/google_auth_service.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/select_market_page.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/signup_page.dart';
 import 'package:flutter/material.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import 'remember_me_row.dart';
-import 'social_login_button.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -16,70 +17,84 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   bool obscurePassword = true;
+
   bool _isGoogleLoading = false;
-  final GoogleAuthService _authService = GoogleAuthService();
+  bool _isFacebookLoading = false;
 
-  // Google Sign-In Handler
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
+
+  // ================= GOOGLE SIGN-IN =================
   Future<void> _handleGoogleSignIn() async {
-  if (_isGoogleLoading) return;
+    if (_isGoogleLoading) return;
 
-  setState(() => _isGoogleLoading = true);
+    setState(() => _isGoogleLoading = true);
 
-  try {
-    final user = await _authService.signInWithGoogle();
+    try {
+      final user = await _googleAuthService.signInWithGoogle();
 
-    if (!mounted) return;
-
-    if (user != null) {
-      // ✅ Add a small delay to ensure Firebase auth state updates
-      await Future.delayed(const Duration(milliseconds: 300));
-      
       if (!mounted) return;
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SelectMarketPage()),
-      );
-    } else {
-      // User cancelled
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sign-in cancelled'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  } catch (e) {
-    if (!mounted) return;
 
-    debugPrint('Google Sign-In Error: $e'); // Add this for debugging
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Sign-in failed: ${e.toString().replaceAll('Exception: ', '')}'),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  } finally {
-    if (mounted) {
-      setState(() => _isGoogleLoading = false);
+      if (user != null) {
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+        );
+      } else {
+        _showSnack('Google sign-in cancelled', Colors.orange);
+      }
+    } catch (e) {
+      debugPrint('Google Sign-In Error: $e');
+      _showSnack('Google sign-in failed', Colors.red);
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
-}
 
+  // ================= FACEBOOK SIGN-IN =================
+  Future<void> _handleFacebookSignIn() async {
+    if (_isFacebookLoading) return;
+
+    setState(() => _isFacebookLoading = true);
+
+    try {
+      final result = await FacebookAuthService.login();
+
+      if (!mounted) return;
+
+      if (result != null) {
+        debugPrint('Facebook User: ${result['user']}');
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+        );
+      } else {
+        _showSnack('Facebook sign-in cancelled', Colors.orange);
+      }
+    } catch (e) {
+      debugPrint('Facebook Sign-In Error: $e');
+      _showSnack(
+        e.toString().replaceAll('Exception: ', ''),
+        Colors.red,
+      );
+    } finally {
+      if (mounted) setState(() => _isFacebookLoading = false);
+    }
+  }
+
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 30),
-
         Image.asset('assets/logo.png', height: 70),
 
         const SizedBox(height: 20),
-
         const Text('Sign in your account', style: AppTextStyles.heading),
         const SizedBox(height: 6),
         const Text(
@@ -88,7 +103,7 @@ class _LoginFormState extends State<LoginForm> {
         ),
 
         const SizedBox(height: 30),
-        
+
         _label('Email'),
         _textField('Your email'),
 
@@ -98,64 +113,28 @@ class _LoginFormState extends State<LoginForm> {
         _passwordField(),
 
         const SizedBox(height: 12),
-
         const RememberMeRow(),
 
         const SizedBox(height: 22),
-
         _signInButton(),
 
         const SizedBox(height: 22),
-
         _divider(),
 
         const SizedBox(height: 22),
-
-          _googleSignInButton(),
-          const SizedBox(height: 12),
-
-        SocialLoginButton.facebook(),
+        _googleButton(),
         const SizedBox(height: 12),
-        
-     
-        
-        const SizedBox(height: 12),
-        // SocialLoginButton.apple(),
+        _facebookButton(),
 
         const SizedBox(height: 22),
-
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Don't have an account? ",
-              style: AppTextStyles.subHeading,
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SignUpPage(),
-                  ),
-                );
-              },
-              child: const Text(
-                'Sign Up',
-                style: TextStyle(
-                  color: AppColors.appleBlack,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
+        _signupRow(),
       ],
     );
   }
 
+  // ================= WIDGETS =================
   Widget _label(String text) {
-    return Align( 
+    return Align(
       alignment: Alignment.centerLeft,
       child: Text(text, style: AppTextStyles.label),
     );
@@ -178,7 +157,6 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget _passwordField() {
     return TextField(
-      cursorColor: AppColors.appleBlack,
       obscureText: obscurePassword,
       decoration: InputDecoration(
         hintText: 'Password',
@@ -206,11 +184,9 @@ class _LoginFormState extends State<LoginForm> {
       height: 52,
       child: ElevatedButton(
         onPressed: () {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const SelectMarketPage(),
-            ),
+            MaterialPageRoute(builder: (_) => const SelectMarketPage()),
           );
         },
         style: ElevatedButton.styleFrom(
@@ -232,54 +208,68 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  // ✅ Google Sign-In Button with Loading State
-  Widget _googleSignInButton() {
+  Widget _googleButton() {
+    return _socialButton(
+      isLoading: _isGoogleLoading,
+      text: 'Continue with Google',
+      icon: Image.asset('assets/google.png', height: 22),
+      backgroundColor: Colors.white,
+      textColor: Colors.black87,
+      onTap: _handleGoogleSignIn,
+    );
+  }
+
+  Widget _facebookButton() {
+    return _socialButton(
+      isLoading: _isFacebookLoading,
+      text: 'Continue with Facebook',
+      icon: const Icon(Icons.facebook, color: Colors.white),
+      backgroundColor: const Color(0xFF1877F2),
+      textColor: Colors.white,
+      onTap: _handleFacebookSignIn,
+    );
+  }
+
+  Widget _socialButton({
+    required bool isLoading,
+    required String text,
+    required Widget icon,
+    required Color backgroundColor,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+        onPressed: isLoading ? null : onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          backgroundColor: backgroundColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
-            side: const BorderSide(color: AppColors.divider, width: 1),
           ),
-          disabledBackgroundColor: Colors.white70,
         ),
-        child: _isGoogleLoading
+        child: isLoading
             ? const SizedBox(
                 height: 22,
                 width: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppColors.greenCTA,
+                  color: Colors.white,
                 ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    'assets/google.png',
-                    height: 22,
-                    width: 22,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.g_mobiledata,
-                        size: 28,
-                        color: Colors.red,
-                      );
-                    },
-                  ),
+                  icon,
                   const SizedBox(width: 12),
-                  const Text(
-                    'Continue with Google',
+                  Text(
+                    text,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: textColor,
                     ),
                   ),
                 ],
@@ -287,8 +277,6 @@ class _LoginFormState extends State<LoginForm> {
       ),
     );
   }
-
-
 
   Widget _divider() {
     return const Row(
@@ -300,6 +288,41 @@ class _LoginFormState extends State<LoginForm> {
         ),
         Expanded(child: Divider(color: AppColors.divider)),
       ],
+    );
+  }
+
+  Widget _signupRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text("Don't have an account? ", style: AppTextStyles.subHeading),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SignUpPage()),
+            );
+          },
+          child: const Text(
+            'Sign Up',
+            style: TextStyle(
+              color: AppColors.appleBlack,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ================= HELPERS =================
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 }
