@@ -1,26 +1,26 @@
-import 'package:concession_tracker_ui/features/auth/presentation/pages/addtocart.dart';
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'store_menu_page.dart';
 import 'saved_item.dart';
+import 'order_summary_page.dart';
 import 'myorders.dart';
 import '../widgets/main_bottom_nav.dart';
 
-class MainShellPage extends StatefulWidget {
-  const MainShellPage({super.key});
+class MainShellPage1 extends StatefulWidget {
+  const MainShellPage1({super.key});
 
   @override
-  State<MainShellPage> createState() => _MainShellPageState();
+  State<MainShellPage1> createState() => _MainShellPage1State();
 }
 
-class _MainShellPageState extends State<MainShellPage> {
+class _MainShellPage1State extends State<MainShellPage1> {
   int _currentIndex = 0;
 
   // 🔥 IMPORTANT: Home & StoreMenu are both here
   final List<Widget> _pages = [
     const HomePage(),
     const SavedScreen(),
-    const Cart(), // Cart
+    const OrderSummaryPage(), // Cart
     const MyOrdersPage(),     // Orders
   ];
 

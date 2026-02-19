@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/hamburger_page.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/main_page.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/mainpage2.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/notifications.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/store_menu_page.dart';
 import 'package:flutter/material.dart';
@@ -85,7 +87,7 @@ class _HomePageState extends State<HomePage> {
                   _title("Categories", screenWidth),
                   _categories(screenWidth),
                   _title(
-                    "Stores Near you",
+                    "Restaurant Near you",
                     screenWidth,
                     showSeeAll: true,
                     onSeeAllTap: () {
@@ -510,15 +512,14 @@ class _HomePageState extends State<HomePage> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => StoreMenuPage(
-              storeName: name,
-              storeImage: image,
-            ),
+            builder: (_) => const StoreMenuPage(storeName: 'RestuarantName', storeImage: 'StoreImage'),
           ),
+          (route) => false,
         );
+
       },
       child: Container(
         width: width,
@@ -657,15 +658,14 @@ class _HomePageState extends State<HomePage> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => StoreMenuPage(
-              storeName: name,
-              storeImage: image,
-            ),
-          ),
-        );
+       Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainShellPage1(),
+        ),
+        (route) => false,
+      );
+
       },
       child: Container(
         decoration: BoxDecoration(

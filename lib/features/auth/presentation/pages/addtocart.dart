@@ -3,20 +3,23 @@ import 'package:concession_tracker_ui/features/auth/presentation/pages/store_men
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 
-class OrderSummaryPage extends StatefulWidget {
-  const OrderSummaryPage({super.key});
+class Cart extends StatefulWidget {
+  const Cart({super.key});
 
   @override
-  State<OrderSummaryPage> createState() => _OrderSummaryPageState();
+  State<Cart> createState() => _Cart();
 }
 
-class _OrderSummaryPageState extends State<OrderSummaryPage> {
+class _Cart extends State<Cart> {
+  // Track if add-ons section is expanded (single section for all items)
   bool _addOnsExpanded = false;
   
+  // Track main item quantities - starting with only one item
   final Map<int, int> _itemQuantities = {
     0: 1,
   };
   
+  // Track add-on quantities (start at 0 - not selected)
   final Map<String, int> _addOnQuantities = {
     'Pepsi 330ml': 0,
     'Fanta 330ml': 0,
@@ -24,18 +27,26 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     'Ketch Up': 0,
   };
 
+  // Item base price
   final double _itemBasePrice = 4.50;
   
-  // Credits (auto-applied, 1 credit = $1 discount)
+  // Credits
   final int _totalCredits = 2;
+  int _appliedCredits = 0;
+  
+  // Track if credits dropdown is expanded
+  bool _creditsExpanded = false;
 
+  // Calculate total price
   Map<String, double> _calculatePrices() {
     double itemSubtotal = 0;
     
+    // Calculate main items total
     _itemQuantities.forEach((index, quantity) {
       itemSubtotal += _itemBasePrice * quantity;
     });
     
+    // Calculate add-ons total (only if quantity > 0)
     _addOnQuantities.forEach((name, quantity) {
       if (quantity > 0) {
         double price = name == 'Ketch Up' ? 1.00 : 2.00;
@@ -43,9 +54,9 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
       }
     });
     
-    // Always apply all credits (1 credit = $1)
-    double total = itemSubtotal - _totalCredits;
-    if (total < 0) total = 0;
+    // Apply credits discount
+    double total = itemSubtotal - _appliedCredits;
+    if (total < 0) total = 0; // Ensure total doesn't go negative
     
     return {
       'subtotal': itemSubtotal,
@@ -71,7 +82,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                   _orderSummary(),
                   const SizedBox(height: 24),
                   _credits(),
-                  const SizedBox(height: 90),
+                  const SizedBox(height: 90), // space for PAY button
                 ],
               ),
             ),
@@ -82,43 +93,36 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     );
   }
 
-  Widget _header(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.gradientTop, AppColors.gradientTop],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(25),
-          bottomRight: Radius.circular(25),
+  // 🔶 HEADER
+Widget _header(BuildContext context) {
+  return Container(
+    padding: EdgeInsets.fromLTRB(
+      16,
+      MediaQuery.of(context).padding.top + 24, // ✅ Proper top spacing
+      16,
+      24,
+    ),
+    decoration: const BoxDecoration(
+      color: AppColors.white,
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(25),
+        bottomRight: Radius.circular(25),
+      ),
+    ),
+    child: Center(
+      child: const Text(
+        'Cart',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
         ),
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Concession Name',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
+  // 🧺 ORDER ITEMS
   Widget _orderItems() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -138,6 +142,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
             ),
           ),
           const Divider(color: Colors.white54),
+          // Display all order items
           ..._itemQuantities.keys.map((index) => Column(
             children: [
               _orderItem(index),
@@ -146,6 +151,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
             ],
           )).toList(),
           
+          // Single Add-Ons section for all items
           if (_itemQuantities.isNotEmpty) ...[
             const SizedBox(height: 8),
             GestureDetector(
@@ -223,7 +229,8 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
                 SizedBox(height: 4),
                 Text(
                   '\$4.50',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -233,6 +240,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
       ),
     );
   }
+
 
   Widget _addOnsDropdown() {
     return Container(
@@ -288,6 +296,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
             ),
           ),
           const SizedBox(width: 12),
+          // Quantity controls
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -338,6 +347,7 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
   Widget _quantityButton(int index) {
     return Row(
       children: [
+   
         InkWell(
           onTap: () {
             setState(() {
@@ -358,6 +368,8 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
             ),
           ),
         ),
+
+     
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -400,26 +412,28 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     );
   }
 
-  Widget _actionButton(String text, IconData icon) {
+  Widget _actionButton(String text, IconData icon){
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12)
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            text,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+           text,
+           style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 6),
           Icon(icon, size: 16),
         ],
       ),
+
     );
   }
+
 
   Widget _orderSummary() {
     final prices = _calculatePrices();
@@ -433,7 +447,9 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
         ),
         const SizedBox(height: 12),
         _summaryRow('Item subtotal', '\$${prices['subtotal']!.toStringAsFixed(2)}'),
-       
+        if (_appliedCredits > 0)
+          _summaryRow('Credits applied', '-\$${_appliedCredits.toStringAsFixed(2)}',
+              color: Colors.green),
         const Divider(),
         _summaryRow('Total', '\$${prices['total']!.toStringAsFixed(2)}', bold: true),
       ],
@@ -465,28 +481,160 @@ class _OrderSummaryPageState extends State<OrderSummaryPage> {
     );
   }
 
-  // 🎁 CREDITS SLAB (always applied, no dropdown)
+
   Widget _credits() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.gradientTop, AppColors.gradientBottom],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.card_giftcard, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(
-            'Credits Applied: $_totalCredits ',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _creditsExpanded = !_creditsExpanded;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.gradientTop, AppColors.gradientBottom],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.card_giftcard, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Available Credits: $_totalCredits',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                if (_appliedCredits > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '$_appliedCredits applied',
+                      style: const TextStyle(
+                        color: AppColors.gradientTop,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                Icon(
+                  _creditsExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+
+        if (_creditsExpanded)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.gradientTop, width: 2),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.stars, color: AppColors.gradientTop),
+                    const SizedBox(width: 8),
+                    Text(
+                      'You have $_totalCredits credits',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Apply all credits to get \$${_totalCredits.toStringAsFixed(2)} discount',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gradientTop,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _appliedCredits == 0
+                        ? () {
+                            setState(() {
+                              _appliedCredits = _totalCredits;
+                              _creditsExpanded = false;
+                            });
+                          }
+                        : null,
+                    child: Text(
+                      _appliedCredits == 0 ? 'Apply Credits' : 'Already Applied',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_appliedCredits > 0) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _appliedCredits = 0;
+                        });
+                      },
+                      child: const Text(
+                        'Remove Credits',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
     );
   }
+
 
   Widget _payButton() {
     final prices = _calculatePrices();

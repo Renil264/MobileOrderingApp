@@ -1,51 +1,68 @@
+import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/notification.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'features/auth/presentation/pages/login_page.dart';
+
+import 'features/auth/presentation/widgets/login_page.dart';
 import 'firebase_options.dart';
 
-Future<void> main() async {
-  // Capture any errors that occur during initialization
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    debugPrint('Flutter Error: ${details.exception}');
-    debugPrint('Stack trace: ${details.stack}');
-  };
+/// 🌍 Global FCM Token
+String? globalFcmToken;
 
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  debugPrint('🚀 App starting...');
-  
-  // Set system UI styles
-  SystemChrome.setEnabledSystemUIMode(
-    SystemUiMode.edgeToEdge,
+/// Background message handler
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
+  NotificationService().showNotification(message);
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  FirebaseMessaging.onBackgroundMessage(
+    _firebaseMessagingBackgroundHandler,
+  );
+
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  /// 🔥 Fetch FCM Token
+final token = await FirebaseMessaging.instance.getToken();
+
+GlobalFCM.token = token;
+
+debugPrint('FCM Token Saved Globally: ${GlobalFCM.token}');
+
+  /// 🔄 Auto update if token changes
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    globalFcmToken = newToken;
+    debugPrint('🔄 FCM Token Refreshed: $globalFcmToken');
+  });
+
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
-      systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
-  
-  // Initialize Firebase with error handling
-  try {
-    debugPrint('🔥 Initializing Firebase...');
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('✅ Firebase initialized successfully');
-  } catch (e, stackTrace) {
-    debugPrint('❌ Firebase initialization failed: $e');
-    debugPrint('Stack trace: $stackTrace');
-    // Don't throw - let app run to show error to user
-  }
-  
-  debugPrint('🎨 Starting app...');
+
   runApp(const MyApp());
 }
 
@@ -58,14 +75,13 @@ class MyApp extends StatelessWidget {
       title: 'Mobile Ordering Application',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF172B4D)),
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF172B4D),
+        ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(fontFamily: 'DM Sans'),
           bodyMedium: TextStyle(fontFamily: 'DM Sans'),
-          displayLarge: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold),
-          displayMedium: TextStyle(fontFamily: 'DM Sans', fontStyle: FontStyle.italic),
-          displaySmall: TextStyle(fontFamily: 'DM Sans', fontWeight: FontWeight.bold, fontStyle: FontStyle.italic),
         ),
       ),
       home: const LoginPage(),

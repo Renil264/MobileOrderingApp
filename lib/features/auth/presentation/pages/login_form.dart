@@ -1,12 +1,15 @@
 import 'package:concession_tracker_ui/core/facebook_auth_service.dart';
 import 'package:concession_tracker_ui/core/google_auth_service.dart';
-import 'package:concession_tracker_ui/features/auth/presentation/pages/select_market_page.dart';
-import 'package:concession_tracker_ui/features/auth/presentation/pages/signup_page.dart';
+import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/widgets/signup_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import 'remember_me_row.dart';
+import '../bloc/login/login_bloc.dart';
+import '../bloc/login/login_event.dart';
+import '../widgets/remember_me_row.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -18,12 +21,37 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   bool obscurePassword = true;
 
+  final TextEditingController _emailController =
+      TextEditingController();
+  final TextEditingController _passwordController =
+      TextEditingController();
+
   bool _isGoogleLoading = false;
   bool _isFacebookLoading = false;
 
-  final GoogleAuthService _googleAuthService = GoogleAuthService();
+  final GoogleAuthService _googleAuthService =
+      GoogleAuthService();
 
-  // ================= GOOGLE SIGN-IN =================
+  // ================= NORMAL LOGIN =================
+  void _handleLogin() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showSnack("Please enter email and password", Colors.red);
+      return;
+    }
+
+    context.read<LoginBloc>().add(
+          Login(
+            email: email,
+            password: password,
+            fcmToken: GlobalFCM.token ?? "",
+          ),
+        );
+  }
+
+  // ================= GOOGLE =================
   Future<void> _handleGoogleSignIn() async {
     if (_isGoogleLoading) return;
 
@@ -32,57 +60,36 @@ class _LoginFormState extends State<LoginForm> {
     try {
       final user = await _googleAuthService.signInWithGoogle();
 
-      if (!mounted) return;
-
       if (user != null) {
-        await Future.delayed(const Duration(milliseconds: 300));
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const SelectMarketPage()),
-        );
-      } else {
-        _showSnack('Google sign-in cancelled', Colors.orange);
+        _showSnack("Google login success", Colors.green);
       }
     } catch (e) {
-      debugPrint('Google Sign-In Error: $e');
-      _showSnack('Google sign-in failed', Colors.red);
+      _showSnack("Google login failed", Colors.red);
     } finally {
-      if (mounted) setState(() => _isGoogleLoading = false);
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
     }
   }
 
-  // ================= FACEBOOK SIGN-IN =================
+  // ================= FACEBOOK =================
   Future<void> _handleFacebookSignIn() async {
     if (_isFacebookLoading) return;
 
     setState(() => _isFacebookLoading = true);
 
     try {
-      final result = await FacebookAuthService.login();
+      final success = await FacebookAuthService.login();
 
-      if (!mounted) return;
-
-      if (result != null) {
-        debugPrint('Facebook User: ${result['user']}');
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const SelectMarketPage()),
-        );
-      } else {
-        _showSnack('Facebook sign-in cancelled', Colors.orange);
+      if (success) {
+        _showSnack("Facebook login success", Colors.green);
       }
     } catch (e) {
-      debugPrint('Facebook Sign-In Error: $e');
-      _showSnack(
-        e.toString().replaceAll('Exception: ', ''),
-        Colors.red,
-      );
+      _showSnack("Facebook login failed", Colors.red);
     } finally {
-      if (mounted) setState(() => _isFacebookLoading = false);
+      if (mounted) {
+        setState(() => _isFacebookLoading = false);
+      }
     }
   }
 
@@ -95,7 +102,9 @@ class _LoginFormState extends State<LoginForm> {
         Image.asset('assets/logo.png', height: 70),
 
         const SizedBox(height: 20),
-        const Text('Sign in your account', style: AppTextStyles.heading),
+        const Text('Sign in your account',
+            style: AppTextStyles.heading),
+
         const SizedBox(height: 6),
         const Text(
           'Sign up or log in to get started',
@@ -105,7 +114,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(height: 30),
 
         _label('Email'),
-        _textField('Your email'),
+        _textField(_emailController, 'Your email'),
 
         const SizedBox(height: 16),
 
@@ -123,6 +132,7 @@ class _LoginFormState extends State<LoginForm> {
 
         const SizedBox(height: 22),
         _googleButton(),
+
         const SizedBox(height: 12),
         _facebookButton(),
 
@@ -133,6 +143,7 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   // ================= WIDGETS =================
+
   Widget _label(String text) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -140,8 +151,10 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  Widget _textField(String hint) {
+  Widget _textField(
+      TextEditingController controller, String hint) {
     return TextField(
+      controller: controller,
       cursorColor: AppColors.appleBlack,
       decoration: InputDecoration(
         hintText: hint,
@@ -157,6 +170,7 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget _passwordField() {
     return TextField(
+      controller: _passwordController,
       obscureText: obscurePassword,
       decoration: InputDecoration(
         hintText: 'Password',
@@ -164,10 +178,13 @@ class _LoginFormState extends State<LoginForm> {
         fillColor: AppColors.white,
         suffixIcon: IconButton(
           icon: Icon(
-            obscurePassword ? Icons.visibility_off : Icons.visibility,
+            obscurePassword
+                ? Icons.visibility_off
+                : Icons.visibility,
           ),
           onPressed: () {
-            setState(() => obscurePassword = !obscurePassword);
+            setState(
+                () => obscurePassword = !obscurePassword);
           },
         ),
         border: OutlineInputBorder(
@@ -183,12 +200,7 @@ class _LoginFormState extends State<LoginForm> {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const SelectMarketPage()),
-          );
-        },
+        onPressed: _handleLogin, // ✅ BLOC TRIGGER
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.greenCTA,
           shape: RoundedRectangleBorder(
@@ -260,7 +272,8 @@ class _LoginFormState extends State<LoginForm> {
                 ),
               )
             : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment:
+                    MainAxisAlignment.center,
                 children: [
                   icon,
                   const SizedBox(width: 12),
@@ -284,7 +297,8 @@ class _LoginFormState extends State<LoginForm> {
         Expanded(child: Divider(color: AppColors.divider)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
-          child: Text('or', style: AppTextStyles.subHeading),
+          child:
+              Text('or', style: AppTextStyles.subHeading),
         ),
         Expanded(child: Divider(color: AppColors.divider)),
       ],
@@ -293,14 +307,18 @@ class _LoginFormState extends State<LoginForm> {
 
   Widget _signupRow() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment:
+          MainAxisAlignment.center,
       children: [
-        const Text("Don't have an account? ", style: AppTextStyles.subHeading),
+        const Text("Don't have an account? ",
+            style: AppTextStyles.subHeading),
         GestureDetector(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const SignUpPage()),
+              MaterialPageRoute(
+                  builder: (_) =>
+                      const SignUpPage()),
             );
           },
           child: const Text(
@@ -315,13 +333,11 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  // ================= HELPERS =================
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
         backgroundColor: color,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

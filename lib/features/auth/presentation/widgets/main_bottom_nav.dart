@@ -13,38 +13,56 @@ class MainBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 80,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.gradientTop,
-              AppColors.gradientTop,
-            ],
-          ),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(30),
-          ),
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          type: BottomNavigationBarType.fixed,
-          currentIndex: currentIndex,
-          onTap: onTap, // 🔥 THIS NOW WORKS
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.white70,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Saved'),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), label: 'Cart'),
-            BottomNavigationBarItem(icon: Icon(Icons.attach_money_outlined), label: 'Credits'),
+    return Container(
+      height: 75,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.gradientTop,
+            AppColors.gradientTop,
           ],
         ),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(25),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _navItem(Icons.home_outlined, "Home", 0),
+          _navItem(Icons.favorite_border, "Saved", 1),
+          _navItem(Icons.shopping_cart_outlined, "Cart", 2),
+          _navItem(Icons.receipt_long_outlined, "Orders", 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, int index) {
+    final bool isSelected = currentIndex == index;
+
+    return InkWell(
+      onTap: () => onTap(index),
+      borderRadius: BorderRadius.circular(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? Colors.white : Colors.white70,
+            size: 26,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
-

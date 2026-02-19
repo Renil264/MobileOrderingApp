@@ -58,14 +58,10 @@ class _MyOrdersPageState extends State<MyOrdersPage> {
         elevation: 0,
         centerTitle: true,
         backgroundColor: AppColors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.gradientTop),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
           "My Orders",
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: AppColors.appleBlack,
           ),

@@ -67,4 +67,5 @@ class DefaultFirebaseOptions {
     iosClientId: '607534108011-1k3pe0cifhossddp5v7r1lomkdjn5ebj.apps.googleusercontent.com',
     iosBundleId: 'com.esoftsys.concessiontrackerapp',
   );
+
 }
