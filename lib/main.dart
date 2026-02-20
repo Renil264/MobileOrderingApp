@@ -1,4 +1,6 @@
 import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/user_storage.dart';
+import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:concession_tracker_ui/notification.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -62,6 +64,10 @@ debugPrint('FCM Token Saved Globally: ${GlobalFCM.token}');
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  await UserStorage.loadUser();
+  await setupLocator();
+  
 
   runApp(const MyApp());
 }

@@ -1,6 +1,5 @@
 import 'package:concession_tracker_ui/core/constants/app_colors.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/home_page.dart';
-import 'package:concession_tracker_ui/features/auth/presentation/pages/main_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 

@@ -1,5 +1,4 @@
-import 'package:concession_tracker_ui/core/google_auth_service.dart';
-import 'package:concession_tracker_ui/core/facebook_auth_service.dart';
+
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/signup/auth_bloc.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/signup/auth_event.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/signup/auth_state.dart';
@@ -22,12 +21,7 @@ class _SignUpFormState extends State<SignUpForm> {
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
 
-  bool _isGoogleLoading = false;
-  bool _isFacebookLoading = false;
 
-  final GoogleAuthService _googleAuthService = GoogleAuthService();
-
-  // ✅ Controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -335,32 +329,4 @@ Widget _signUpButton() {
   //   );
   // }
 
-  Widget _socialIcon({
-    required String asset,
-    required bool isLoading,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: isLoading ? null : onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2),
-                )
-              : Image.asset(asset, height: 22),
-        ),
-      ),
-    );
-  }
 }

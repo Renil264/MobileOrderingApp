@@ -1,12 +1,9 @@
-import 'package:concession_tracker_ui/features/auth/domain/entities/login_entity.dart';
+import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/user_storage.dart';
 import 'package:concession_tracker_ui/features/auth/domain/usecases/login_usecase.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/login/login_event.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/login/login_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-
 
 class LoginBloc extends Bloc<LoginEvent, LoginState> {
   final LoginUseCase loginUseCase;
@@ -15,8 +12,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     on<Login>(_onLogin);
   }
 
-  Future<void> _onLogin(
-      Login event, Emitter<LoginState> emit) async {
+  Future<void> _onLogin(Login event, Emitter<LoginState> emit) async {
     emit(LoginLoading());
 
     try {
@@ -26,11 +22,19 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         fcmToken: event.fcmToken,
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt("userId", result.userId);
-      await prefs.setString("userName", result.name);
+      // 1. Set GlobalUser so it's available immediately in-memory
+      GlobalUser.name = result.name;
+      GlobalUser.email = event.email;
+      GlobalUser.id = result.userId;
 
-      emit(LoginSuccess(result as LoginEntity));
+      // 2. Persist to storage for future sessions
+      await UserStorage.saveUser(
+        id: result.userId,
+        name: result.name,
+        email: event.email,
+      );
+
+      emit(LoginSuccess(result));
     } catch (e) {
       emit(LoginFailure(e.toString()));
     }
