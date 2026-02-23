@@ -12,7 +12,7 @@ class UserStorage {
     required String name,
     required String email,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance(); 
 
     await prefs.setInt(_keyId, id);
     await prefs.setString(_keyName, name);

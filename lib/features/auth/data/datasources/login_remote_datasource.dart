@@ -28,7 +28,7 @@ class LoginRemoteDatasource {
         data["message"] == "success") {
       return LoginEntity(
         message: data["message"] ?? "",
-        userId: data["usr_int_usrid"] ?? 0,
+        userId: data["usr_int_id"] ?? 0,
         name: data["usr_vch_name"] ?? "",
       );
     } else {
