@@ -1,10 +1,13 @@
-// lib/features/auth/presentation/pages/select_market_page.dart
-// UPDATED: stores market in GlobalMarket and provides ConcessionBloc to next page
-
+import 'dart:convert';
+import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/user_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:concession_tracker_ui/core/global_market.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionlist/concession_bloc.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionlist/concession_event.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/main_page.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/widgets/login_page.dart';
 import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,6 +24,8 @@ class SelectMarketForm extends StatefulWidget {
 class _SelectMarketFormState extends State<SelectMarketForm> {
   String? selectedCity;
   String? selectedMarket;
+
+  bool isLogoutLoading = false;
 
   final Map<String, List<String>> cityMarketMap = {
     'WINSTON SALEM - North California': ['Cooks Flea Market'],
@@ -40,9 +45,71 @@ class _SelectMarketFormState extends State<SelectMarketForm> {
     'MONROE - Washington': ['Treasure Aisles Flea Market'],
   };
 
+  /// ================= LOGOUT API =================
+  Future<void> _logoutUser(BuildContext context) async {
+    const String url =
+        "http://192.168.10.144/ConcessionTracker/api/Users/logout";
+
+    if (isLogoutLoading) return;
+
+    setState(() {
+      isLogoutLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "email": GlobalUser.email,
+          "fcmToken": GlobalFCM.token,
+        }),
+      );
+
+      print("EMAIL: ${GlobalUser.email}");
+      print("FCM: ${GlobalFCM.token}");
+
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(data["message"] ?? "Logout successful")),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const LoginPage(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Logout failed (${response.statusCode})"),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() {
+        isLogoutLoading = false;
+      });
+    }
+  }
+  /// ===================================================
+
   @override
   Widget build(BuildContext context) {
-    final bool canContinue = selectedCity != null && selectedMarket != null;
+    final bool canContinue =
+        selectedCity != null && selectedMarket != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,27 +117,60 @@ class _SelectMarketFormState extends State<SelectMarketForm> {
         const SizedBox(height: 30),
         Center(child: Image.asset('assets/logo.png', height: 70)),
         const SizedBox(height: 24),
-        const Text('Select Your City and Market', style: AppTextStyles.heading),
+        const Text('Select Your City and Market',
+            style: AppTextStyles.heading),
         const SizedBox(height: 6),
         const Text(
           'Please choose your city and market to log in to your account.',
           style: AppTextStyles.subHeading,
         ),
         const SizedBox(height: 30),
+
         _label('Choose a City'),
         const SizedBox(height: 6),
         _cityDropdown(),
         const SizedBox(height: 30),
+
         _label('Choose a Market'),
         const SizedBox(height: 6),
         _marketDropdown(),
         const SizedBox(height: 30),
+
         _continueButton(context, canContinue),
+        const SizedBox(height: 16),
+
+        /// ================= LOGOUT BUTTON =================
+        Center(
+          child: TextButton(
+            onPressed: isLogoutLoading
+                ? null
+                : () => _logoutUser(context),
+            child: isLogoutLoading
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.appleBlack,
+                    ),
+                  )
+                : const Text(
+                    'Go Back to SignIn',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                      color: AppColors.appleBlack,
+                    ),
+                  ),
+          ),
+        )
       ],
     );
   }
 
-  Widget _label(String text) => Text(text, style: AppTextStyles.label);
+  Widget _label(String text) =>
+      Text(text, style: AppTextStyles.label);
 
   Widget _cityDropdown() {
     return Container(
@@ -86,7 +186,8 @@ class _SelectMarketFormState extends State<SelectMarketForm> {
           icon: const Icon(Icons.keyboard_arrow_down),
           isExpanded: true,
           items: cityMarketMap.keys.map((city) {
-            return DropdownMenuItem(value: city, child: Text(city));
+            return DropdownMenuItem(
+                value: city, child: Text(city));
           }).toList(),
           onChanged: (value) {
             setState(() {
@@ -107,7 +208,9 @@ class _SelectMarketFormState extends State<SelectMarketForm> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: isEnabled ? AppColors.white : Colors.grey.shade200,
+        color: isEnabled
+            ? AppColors.white
+            : Colors.grey.shade200,
         borderRadius: BorderRadius.circular(10),
       ),
       child: DropdownButtonHideUnderline(
@@ -117,33 +220,35 @@ class _SelectMarketFormState extends State<SelectMarketForm> {
           icon: const Icon(Icons.keyboard_arrow_down),
           isExpanded: true,
           items: markets.map((market) {
-            return DropdownMenuItem(value: market, child: Text(market));
+            return DropdownMenuItem(
+                value: market, child: Text(market));
           }).toList(),
           onChanged: isEnabled
-              ? (value) => setState(() => selectedMarket = value)
+              ? (value) =>
+                  setState(() => selectedMarket = value)
               : null,
         ),
       ),
     );
   }
 
-  Widget _continueButton(BuildContext context, bool canContinue) {
+  Widget _continueButton(
+      BuildContext context, bool canContinue) {
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         onPressed: canContinue
             ? () {
-                // 1. Store market name globally
                 GlobalMarket.setMarket(selectedMarket!);
 
-                // 2. Navigate and provide BLoC, then immediately fetch
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
                     builder: (_) => BlocProvider(
                       create: (_) => sl<ConcessionBloc>()
-                        ..add(FetchConcessions(selectedMarket!)),
+                        ..add(FetchConcessions(
+                            selectedMarket!)),
                       child: const MainShellPage(),
                     ),
                   ),

@@ -1,14 +1,14 @@
+// lib/features/auth/domain/usecases/concession_usecase.dart
+// Class name matches your injection_container: GetConcessions
 
-import 'package:concession_tracker_ui/features/auth/domain/entities/concession_entity.dart';
-
-import '../repositories/concession_repository.dart';
+import 'package:concession_tracker_ui/features/auth/domain/repositories/concession_repository.dart';
 
 class GetConcessions {
   final ConcessionRepository repository;
 
   GetConcessions(this.repository);
 
-  Future<List<Concession>> call(String marketName) {
+  Future<List<String>> call(String marketName) {
     return repository.getConcessions(marketName);
   }
 }

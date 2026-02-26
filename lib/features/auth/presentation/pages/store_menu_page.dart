@@ -1,4 +1,7 @@
+// lib/features/auth/presentation/pages/store_menu_page.dart
+
 import 'package:concession_tracker_ui/core/global_market.dart';
+import 'package:concession_tracker_ui/core/global_selected_item.dart';
 import 'package:concession_tracker_ui/core/global_user.dart';
 import 'package:concession_tracker_ui/core/globalconcession.dart';
 import 'package:concession_tracker_ui/features/auth/domain/entities/items_by_category.dart';
@@ -8,7 +11,6 @@ import 'package:concession_tracker_ui/features/auth/presentation/bloc/itembycate
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/itemcategory/item_by_category_bloc.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/itemcategory/item_by_category_event.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/itemcategory/item_by_category_state.dart';
-
 import 'package:concession_tracker_ui/features/auth/presentation/pages/main_page.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/order_summary_page.dart';
 import 'package:concession_tracker_ui/injection_container.dart';
@@ -31,11 +33,9 @@ class StoreMenuPage extends StatefulWidget {
 }
 
 class _StoreMenuPageState extends State<StoreMenuPage> {
-  // -1 = "All" selected
   int _selectedCategoryId = -1;
   final Map<String, bool> _likedItems = {};
-  
-  // ─── SEARCH FUNCTIONALITY ───────────────────────────
+
   late TextEditingController _searchController;
   String _searchQuery = '';
   List<ItemByCategory> _filteredItems = [];
@@ -45,8 +45,14 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     super.initState();
     _searchController = TextEditingController();
     _searchController.addListener(_onSearchChanged);
-    // Persist concession name immediately when page opens
     GlobalConcession.setName(widget.storeName);
+
+    print('══════════════════════════════════════');
+    print('[StoreMenuPage] storeName : "${widget.storeName}"');
+    print('[StoreMenuPage] userId    : ${GlobalUser.id}');
+    print('[StoreMenuPage] userName  : "${GlobalUser.name}"');
+    print('[StoreMenuPage] userEmail : "${GlobalUser.email}"');
+    print('══════════════════════════════════════');
   }
 
   @override
@@ -55,18 +61,11 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     super.dispose();
   }
 
-  // ─── SEARCH HANDLER ─────────────────────────────────
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
-    });
-  }
+  void _onSearchChanged() =>
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
 
-  // ─── FILTER ITEMS BASED ON SEARCH QUERY ────────────
   List<ItemByCategory> _getFilteredItems(List<ItemByCategory> items) {
-    if (_searchQuery.isEmpty) {
-      return items;
-    }
+    if (_searchQuery.isEmpty) return items;
     return items
         .where((item) =>
             item.itemName.toLowerCase().contains(_searchQuery) ||
@@ -74,25 +73,25 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
         .toList();
   }
 
+  /// Always builds LoadAllItems fresh from GlobalUser — never stale.
+  LoadAllItems _loadAllEvent() => LoadAllItems(
+        concessionName: widget.storeName,
+        userId: GlobalUser.id,
+        userName: GlobalUser.name,
+        userEmail: GlobalUser.email,
+      );
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Loads the category list for the market
         BlocProvider(
           create: (_) => sl<ItemCategoryBloc>()
             ..add(FetchItemCategories(GlobalMarket.marketName)),
         ),
-        // Handles both "All items" and "Items by category"
         BlocProvider(
           create: (_) => sl<ItemByCategoryBloc>()
-            // Start with all items
-            ..add(LoadAllItems(
-              concessionName: widget.storeName,
-              userId: GlobalUser.id,
-              userName: GlobalUser.name,
-              userEmail: GlobalUser.email,
-            )),
+            ..add(_loadAllEvent()),
         ),
       ],
       child: Builder(
@@ -112,42 +111,39 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // CATEGORY SECTION — API driven with "All" prepended
+  // CATEGORY SECTION
   // ─────────────────────────────────────────────────────────────────
   Widget _categorySection(BuildContext context) {
     return BlocBuilder<ItemCategoryBloc, ItemCategoryState>(
       builder: (context, state) {
-        // While loading just show the "All" chip
         if (state is ItemCategoryLoading || state is ItemCategoryInitial) {
-          return _staticCategoryRow(context, []);
+          return _categoryRow(context, []);
         }
         if (state is ItemCategoryLoaded) {
-          return _staticCategoryRow(context, state.categories
-              .map((c) => _CategoryMeta(
-                    id: c.categoryId,
-                    name: c.categoryName,
-                  ))
-              .toList());
+          return _categoryRow(
+            context,
+            state.categories
+                .map((c) => _CategoryMeta(id: c.categoryId, name: c.categoryName))
+                .toList(),
+          );
         }
-        return _staticCategoryRow(context, []);
+        // Error or any other state — still show row with just "All"
+        return _categoryRow(context, []);
       },
     );
   }
 
-  Widget _staticCategoryRow(
-      BuildContext context, List<_CategoryMeta> cats) {
+  Widget _categoryRow(BuildContext context, List<_CategoryMeta> cats) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
           padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: Text(
-            'Categories',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black),
-          ),
+          child: Text('Categories',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black)),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -155,12 +151,10 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            // +1 for the "All" chip at index 0
-            itemCount: cats.length + 1,
+            itemCount: cats.length + 1, // +1 for "All"
             itemBuilder: (context, index) {
               if (index == 0) {
-                // ── "All" chip ──────────────────────────────────
-                return _categoryChip(
+                return _chip(
                   context,
                   id: -1,
                   label: 'All',
@@ -168,18 +162,14 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                   isSelected: _selectedCategoryId == -1,
                   onTap: () {
                     setState(() => _selectedCategoryId = -1);
-                    context.read<ItemByCategoryBloc>().add(LoadAllItems(
-                          concessionName: widget.storeName,
-                          userId: GlobalUser.id,
-                          userName: GlobalUser.name,
-                          userEmail: GlobalUser.email,
-                        ));
+                    // Re-read GlobalUser fresh every time
+                    context.read<ItemByCategoryBloc>().add(_loadAllEvent());
                   },
                 );
               }
 
               final cat = cats[index - 1];
-              return _categoryChip(
+              return _chip(
                 context,
                 id: cat.id,
                 label: cat.name,
@@ -187,16 +177,14 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                 onTap: () async {
                   setState(() => _selectedCategoryId = cat.id);
 
-                  // Persist both concessionName + categoryId
+                  // Persist concessionName + categoryId
                   await GlobalConcession.set(
                     concessionName: widget.storeName,
                     categoryId: cat.id,
                   );
 
                   if (context.mounted) {
-                    context
-                        .read<ItemByCategoryBloc>()
-                        .add(FetchItemsByCategory(
+                    context.read<ItemByCategoryBloc>().add(FetchItemsByCategory(
                           concessionName: widget.storeName,
                           categoryId: cat.id,
                         ));
@@ -211,7 +199,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
     );
   }
 
-  Widget _categoryChip(
+  Widget _chip(
     BuildContext context, {
     required int id,
     required String label,
@@ -262,12 +250,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10.7,
-                  fontWeight: isSelected
-                      ? FontWeight.bold
-                      : FontWeight.bold,
-                  color: isSelected
-                      ? AppColors.gradientTop
-                      : Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? AppColors.gradientTop : Colors.black87,
                 ),
               ),
             ),
@@ -278,18 +262,15 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // MENU GRID — driven by ItemByCategoryBloc with search filtering
+  // MENU GRID
   // ─────────────────────────────────────────────────────────────────
   Widget _menuGrid(BuildContext context) {
     return BlocBuilder<ItemByCategoryBloc, ItemByCategoryState>(
       builder: (context, state) {
-        // ── Loading ─────────────────────────────────────────────
-        if (state is ItemByCategoryLoading ||
-            state is ItemByCategoryInitial) {
+        if (state is ItemByCategoryLoading || state is ItemByCategoryInitial) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // ── Error ───────────────────────────────────────────────
         if (state is ItemByCategoryError) {
           return Center(
             child: Padding(
@@ -303,8 +284,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                   Text(
                     'Could not load menu.\n${state.message}',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Colors.red[400], fontSize: 14),
+                    style:
+                        TextStyle(color: Colors.red[400], fontSize: 14),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
@@ -312,12 +293,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                       if (_selectedCategoryId == -1) {
                         context
                             .read<ItemByCategoryBloc>()
-                            .add(LoadAllItems(
-                              concessionName: widget.storeName,
-                              userId: GlobalUser.id,
-                              userName: GlobalUser.name,
-                              userEmail: GlobalUser.email,
-                            ));
+                            .add(_loadAllEvent());
                       } else {
                         context
                             .read<ItemByCategoryBloc>()
@@ -338,21 +314,16 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
           );
         }
 
-        // ── Loaded ──────────────────────────────────────────────
         if (state is ItemByCategoryLoaded) {
-          // Apply search filter to items
           _filteredItems = _getFilteredItems(state.items);
 
           if (state.items.isEmpty) {
             return const Center(
-              child: Text(
-                'No items available.',
-                style: TextStyle(color: Colors.grey, fontSize: 15),
-              ),
+              child: Text('No items available.',
+                  style: TextStyle(color: Colors.grey, fontSize: 15)),
             );
           }
 
-          // Show "no results" message if search returns nothing
           if (_filteredItems.isEmpty && _searchQuery.isNotEmpty) {
             return Center(
               child: Column(
@@ -361,22 +332,15 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                   Icon(Icons.search_off,
                       color: Colors.grey.shade400, size: 64),
                   const SizedBox(height: 16),
-                  Text(
-                    'No items found for "$_searchQuery"',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text('No items found for "$_searchQuery"',
+                      style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500)),
                   const SizedBox(height: 8),
-                  Text(
-                    'Try searching with different keywords',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 14,
-                    ),
-                  ),
+                  Text('Try searching with different keywords',
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 14)),
                 ],
               ),
             );
@@ -390,10 +354,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
                 ],
               ),
               child: ClipRRect(
@@ -401,18 +364,15 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final sw = MediaQuery.of(context).size.width;
-                    final crossAxisCount = sw > 600 ? 3 : 2;
-                    final aspectRatio = sw > 600 ? 0.70 : 0.68;
-
                     return GridView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: _filteredItems.length,
                       gridDelegate:
                           SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
+                        crossAxisCount: sw > 600 ? 3 : 2,
                         mainAxisSpacing: 14,
                         crossAxisSpacing: 14,
-                        childAspectRatio: aspectRatio,
+                        childAspectRatio: sw > 600 ? 0.70 : 0.68,
                       ),
                       itemBuilder: (context, index) =>
                           _menuItemCard(context, _filteredItems[index]),
@@ -437,11 +397,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardHeight = constraints.maxHeight;
-        final imageHeight = cardHeight * 0.52;
+        final imageHeight = constraints.maxHeight * 0.52;
         final isTablet = MediaQuery.of(context).size.width >= 600;
-        final titleFont = isTablet ? 16.0 : 14.0;
-        final priceFont = isTablet ? 16.0 : 14.0;
         final buttonFont = isTablet ? 15.0 : 14.0;
 
         return Container(
@@ -450,10 +407,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2)),
             ],
           ),
           child: Column(
@@ -486,8 +442,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                       top: 8,
                       right: 8,
                       child: GestureDetector(
-                        onTap: () => setState(() =>
-                            _likedItems[item.itemName] = !isLiked),
+                        onTap: () => setState(
+                            () => _likedItems[item.itemName] = !isLiked),
                         child: Container(
                           width: 32,
                           height: 32,
@@ -496,20 +452,15 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.10),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
+                                  color: Colors.black.withOpacity(0.10),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2)),
                             ],
                           ),
                           child: Icon(
-                            isLiked
-                                ? Icons.favorite
-                                : Icons.favorite_border,
+                            isLiked ? Icons.favorite : Icons.favorite_border,
                             size: 18,
-                            color: isLiked
-                                ? Colors.redAccent
-                                : Colors.grey,
+                            color: isLiked ? Colors.redAccent : Colors.grey,
                           ),
                         ),
                       ),
@@ -533,11 +484,10 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                               item.itemName,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                              style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -558,16 +508,29 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                       SizedBox(
                         width: double.infinity,
                         child: InkWell(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    const OrderSummaryPage()),
-                          ),
+                          onTap: () async {
+                            // ── Persist itemId + categoryId + concessionId ──
+                            await GlobalSelectedItem.set(
+                              itemId: item.itemId,
+                              categoryId: item.categoryId,
+                              concessionId: GlobalSelectedItem.concessionId,
+                            );
+                            print('[ADD] itemId=${item.itemId} '
+                                'categoryId=${item.categoryId} '
+                                'concessionId=${GlobalSelectedItem.concessionId}');
+
+                            if (context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const OrderSummaryPage()),
+                              );
+                            }
+                          },
                           borderRadius: BorderRadius.circular(30),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 11),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 11),
                             decoration: BoxDecoration(
                               color: AppColors.gradientTop,
                               borderRadius: BorderRadius.circular(10),
@@ -576,10 +539,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                               child: Text(
                                 'ADD',
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: buttonFont,
-                                ),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: buttonFont),
                               ),
                             ),
                           ),
@@ -602,11 +564,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
   Widget _header(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-        20,
-        MediaQuery.of(context).padding.top + 16,
-        20,
-        20,
-      ),
+          20, MediaQuery.of(context).padding.top + 16, 20, 20),
       decoration: const BoxDecoration(
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(25),
@@ -624,8 +582,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
             icon: const Icon(Icons.arrow_back_ios_new,
                 color: Colors.white, size: 20),
             onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                  builder: (_) => const MainShellPage()),
+              MaterialPageRoute(builder: (_) => const MainShellPage()),
               (route) => false,
             ),
           ),
@@ -634,10 +591,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
             child: Text(
               widget.storeName,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -646,7 +602,7 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SEARCH — NOW WITH FULL FUNCTIONALITY
+  // SEARCH
   // ─────────────────────────────────────────────────────────────────
   Widget _search() {
     return Padding(
@@ -657,10 +613,9 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2)),
           ],
         ),
         child: TextField(
@@ -670,8 +625,8 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
             hintText: 'Search items...',
             hintStyle:
                 TextStyle(color: Colors.grey.shade600, fontSize: 15),
-            prefixIcon: Icon(Icons.search,
-                color: Colors.grey.shade700, size: 22),
+            prefixIcon:
+                Icon(Icons.search, color: Colors.grey.shade700, size: 22),
             suffixIcon: _searchQuery.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -697,7 +652,6 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
   }
 }
 
-// ── Small helper data class ──────────────────────────────────────────
 class _CategoryMeta {
   final int id;
   final String name;

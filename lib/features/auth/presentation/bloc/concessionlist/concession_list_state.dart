@@ -1,8 +1,4 @@
-// lib/features/concessions/presentation/bloc/concession_state.dart
-
-
-
-import 'package:concession_tracker_ui/features/auth/domain/entities/concession_entity.dart';
+// lib/features/auth/presentation/bloc/concessionlist/concession_list_state.dart
 
 abstract class ConcessionState {}
 
@@ -10,9 +6,13 @@ class ConcessionInitial extends ConcessionState {}
 
 class ConcessionLoading extends ConcessionState {}
 
+/// [concessions] is a plain List<String> of concession names.
+/// [marketId] is saved globally but also available here for convenience.
 class ConcessionLoaded extends ConcessionState {
-  final List<Concession> concessions;
-  ConcessionLoaded(this.concessions);
+  final List<String> concessions;
+  final int marketId;
+
+  ConcessionLoaded({required this.concessions, required this.marketId});
 }
 
 class ConcessionError extends ConcessionState {

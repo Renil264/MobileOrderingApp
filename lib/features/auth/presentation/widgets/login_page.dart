@@ -1,8 +1,8 @@
 import 'package:concession_tracker_ui/features/auth/data/repositories/login_repository_datsource.dart';
-
 import 'package:concession_tracker_ui/features/auth/presentation/pages/select_market_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:quickalert/quickalert.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../pages/login_form.dart';
 import '../bloc/login/login_bloc.dart';
@@ -24,43 +24,54 @@ class LoginPage extends StatelessWidget {
         final repository = LoginRepositoryImpl(remoteDataSource);
         final useCase = LoginUseCase(repository);
 
-        // ✅ CORRECT — Pass UseCase directly
         return LoginBloc(useCase);
       },
       child: BlocListener<LoginBloc, LoginState>(
-        listener: (context, state) {
+        listener: (context, state) async {
+
+          /// 🔄 LOADING STATE
           if (state is LoginLoading) {
-            showDialog(
+            QuickAlert.show(
               context: context,
+              type: QuickAlertType.loading,
+              title: 'Please wait',
+              text: 'Logging you in...',
               barrierDismissible: false,
-              builder: (_) =>
-                  const Center(child: CircularProgressIndicator()),
             );
           }
 
+          /// ✅ SUCCESS STATE
           if (state is LoginSuccess) {
-            Navigator.pop(context); // remove loader
+            // Close loading popup
+            Navigator.of(context, rootNavigator: true).pop();
 
+            // Navigate directly (NO SUCCESS POPUP)
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+              MaterialPageRoute(
+                builder: (_) => const SelectMarketPage(),
+              ),
             );
           }
 
+          /// ❌ FAILURE STATE
           if (state is LoginFailure) {
-            Navigator.pop(context); // remove loader if open
+            // Close loading popup if visible
+            Navigator.of(context, rootNavigator: true).pop();
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message), // ✅ correct property
-                backgroundColor: Colors.red,
-              ),
+            QuickAlert.show(
+              context: context,
+              type: QuickAlertType.error,
+              title: 'Login Failed',
+              text: state.message,
+              confirmBtnText: 'OK',
             );
           }
         },
         child: Scaffold(
           body: Stack(
             children: [
+              /// Background Gradient
               Container(
                 width: size.width,
                 height: size.height,
@@ -75,12 +86,16 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              /// Background Image
               Positioned.fill(
                 child: Image.asset(
                   'assets/login_bg.png',
                   fit: BoxFit.cover,
                 ),
               ),
+
+              /// Gradient Overlay
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -95,6 +110,8 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              /// Login Form
               SafeArea(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),

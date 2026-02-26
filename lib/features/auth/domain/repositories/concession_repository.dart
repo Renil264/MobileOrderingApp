@@ -1,5 +1,5 @@
-import '../entities/concession_entity.dart';
+// lib/features/auth/domain/repositories/concession_repository.dart
 
 abstract class ConcessionRepository {
-  Future<List<Concession>> getConcessions(String marketName);
+  Future<List<String>> getConcessions(String marketName);
 }

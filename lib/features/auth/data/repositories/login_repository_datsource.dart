@@ -5,7 +5,7 @@ import '../datasources/login_remote_datasource.dart';
 class LoginRepositoryImpl implements LoginRepository {
   final LoginRemoteDatasource remoteDatasource;
 
-  LoginRepositoryImpl(this.remoteDatasource);
+  LoginRepositoryImpl(this.remoteDatasource );
 
   @override
   Future<LoginEntity> login({

@@ -1,20 +1,8 @@
 // lib/features/auth/data/datasources/store_item_remote_datasource.dart
-//
-// POST /items
-// Request : { concessionName, userId, userName, userEmail }
-// Response: {
-//   "message": "Items fetched successfully.",
-//   "concessionId": 49,
-//   "items": [
-//     { "itemId": 1, "categoryId": 14, "itemPrice": 0, "itemName": "Water Courtesy" },
-//     ...
-//   ]
-// }
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:concession_tracker_ui/core/global_selected_item.dart';
 import 'package:concession_tracker_ui/features/auth/data/model/store_item_model.dart';
 import 'package:http/http.dart' as http;
 
@@ -41,15 +29,6 @@ class StoreItemRemoteDataSourceImpl implements StoreItemRemoteDataSource {
     required String userEmail,
   }) async {
     try {
-      if (concessionName.trim().isEmpty) {
-        throw Exception('concessionName is empty — cannot fetch items.');
-      }
-      if (userId == 0 || userName.trim().isEmpty || userEmail.trim().isEmpty) {
-        throw Exception(
-            'GlobalUser not populated. '
-            'userId=$userId | userName="$userName" | userEmail="$userEmail".');
-      }
-
       final uri = Uri.parse(
           'http://192.168.10.144/ConcessionTracker/api/Users/items');
 
@@ -60,36 +39,25 @@ class StoreItemRemoteDataSourceImpl implements StoreItemRemoteDataSource {
         'userEmail': userEmail,
       });
 
-      print('══════════════════════════════════════');
       print('[StoreItems] POST $uri');
       print('[StoreItems] Body: $body');
-      print('══════════════════════════════════════');
 
       final response = await client
-          .post(uri,
-              headers: {'Content-Type': 'application/json'}, body: body)
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: body,
+          )
           .timeout(const Duration(seconds: 15));
 
-      print('[StoreItems] Status  : ${response.statusCode}');
+      print('[StoreItems] Status: ${response.statusCode}');
       print('[StoreItems] Response: ${response.body}');
 
       if (response.statusCode == 200) {
-        // ── Response is an OBJECT, not an array ──────────────────
-        final Map<String, dynamic> jsonMap =
-            json.decode(response.body) as Map<String, dynamic>;
-
-        // Save concessionId globally + SharedPreferences
-        final int concessionId =
-            (jsonMap['concessionId'] as num?)?.toInt() ?? 0;
-        await GlobalSelectedItem.setConcessionId(concessionId);
-        print('[StoreItems] concessionId saved: $concessionId');
-
-        // Extract items array safely
-        final List<dynamic> itemsRaw =
-            jsonMap['items'] as List<dynamic>? ?? [];
-
-        return itemsRaw
-            .map((e) => StoreItemModel.fromJson(e as Map<String, dynamic>))
+        final List<dynamic> jsonList = json.decode(response.body);
+        return jsonList
+            .map((e) =>
+                StoreItemModel.fromJson(e as Map<String, dynamic>))
             .toList();
       } else {
         throw Exception(

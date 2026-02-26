@@ -1,9 +1,14 @@
 import 'package:concession_tracker_ui/core/facebook_auth_service.dart';
 import 'package:concession_tracker_ui/core/google_auth_service.dart';
+import 'package:concession_tracker_ui/core/auth_session.dart';
 import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/social_storage.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/select_market_page.dart';
+
 import 'package:concession_tracker_ui/features/auth/presentation/widgets/signup_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:quickalert/quickalert.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -29,8 +34,15 @@ class _LoginFormState extends State<LoginForm> {
   bool _isGoogleLoading = false;
   bool _isFacebookLoading = false;
 
-  final GoogleAuthService _googleAuthService =
-      GoogleAuthService();
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
+  final SocialLoginService _socialLoginService = SocialLoginService();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   // ================= NORMAL LOGIN =================
   void _handleLogin() {
@@ -38,7 +50,10 @@ class _LoginFormState extends State<LoginForm> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack("Please enter email and password", Colors.red);
+      _showPopup(
+        message: "Please enter email and password",
+        type: QuickAlertType.warning,
+      );
       return;
     }
 
@@ -51,20 +66,100 @@ class _LoginFormState extends State<LoginForm> {
         );
   }
 
-  // ================= GOOGLE =================
+  // ================= GOOGLE SIGN IN WITH API CALL =================
   Future<void> _handleGoogleSignIn() async {
     if (_isGoogleLoading) return;
 
     setState(() => _isGoogleLoading = true);
 
     try {
-      final user = await _googleAuthService.signInWithGoogle();
+      // Step 1: Google Sign In (saves data to AuthSession)
+      final googleUser = await _googleAuthService.signInWithGoogle();
 
-      if (user != null) {
-        _showSnack("Google login success", Colors.green);
+      if (googleUser == null) {
+        if (mounted) {
+          _showPopup(
+            message: "Google login cancelled",
+            type: QuickAlertType.warning,
+          );
+        }
+        return;
+      }
+
+      // Step 2: Show loading dialog
+      if (mounted) {
+        _showPopup(
+          message: "Processing your login...",
+          type: QuickAlertType.loading,
+        );
+      }
+
+      // Step 3: Get data from AuthSession (populated by GoogleAuthService)
+      final email = AuthSession.email ?? '';
+      final name = AuthSession.name ?? '';
+      final provider = AuthSession.provider ?? 'google';
+      final providerToken = AuthSession.providerToken ?? '';
+      final photoUrl = AuthSession.profilePhoto;
+
+      // Step 4: Call Social Login API
+      final apiResponse = await _socialLoginService.socialLogin(
+        email: email,
+        name: name,
+        provider: provider,
+        providerToken: providerToken,
+        photoUrl: photoUrl,
+        fcmToken: GlobalFCM.token ?? "",
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
+      if (apiResponse != null) {
+        // Check if the response contains an error message (specific error conditions)
+        // Only show popup for actual error messages like "A login for this device already exists."
+        if (apiResponse is Map && 
+            apiResponse.containsKey('message') && 
+            (apiResponse['message'].toString().toLowerCase().contains('already') ||
+             apiResponse['message'].toString().toLowerCase().contains('error') ||
+             apiResponse['message'].toString().toLowerCase().contains('failed') ||
+             apiResponse['message'].toString().toLowerCase().contains('invalid') ||
+             apiResponse['message'].toString().toLowerCase().contains('exists'))) {
+          final message = apiResponse['message'];
+          if (mounted) {
+            _showPopup(
+              message: message,
+              type: QuickAlertType.error,
+            );
+          }
+        } else {
+          // Success - navigate to SelectMarketPage silently
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+              );
+            }
+          });
+        }
+      } else {
+        if (mounted) {
+          _showPopup(
+            message: "Failed to complete login",
+            type: QuickAlertType.error,
+          );
+        }
       }
     } catch (e) {
-      _showSnack("Google login failed", Colors.red);
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        print('Google Sign In Error: $e');
+        _showPopup(
+          message: "Google login failed: ${e.toString()}",
+          type: QuickAlertType.error,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isGoogleLoading = false);
@@ -72,25 +167,119 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
-  // ================= FACEBOOK =================
+  // ================= FACEBOOK SIGN IN WITH API CALL =================
   Future<void> _handleFacebookSignIn() async {
     if (_isFacebookLoading) return;
 
     setState(() => _isFacebookLoading = true);
 
     try {
-      final success = await FacebookAuthService.login();
+      // Step 1: Facebook Sign In (saves data to AuthSession)
+      final isSuccess = await FacebookAuthService.login();
 
-      if (success) {
-        _showSnack("Facebook login success", Colors.green);
+      if (!isSuccess) {
+        if (mounted) {
+          _showPopup(
+            message: "Facebook login cancelled",
+            type: QuickAlertType.warning,
+          );
+        }
+        return;
+      }
+
+      // Step 2: Show loading dialog
+      if (mounted) {
+        _showPopup(
+          message: "Processing your login...",
+          type: QuickAlertType.loading,
+        );
+      }
+
+      // Step 3: Get data from AuthSession (populated by FacebookAuthService)
+      final email = AuthSession.email ?? '';
+      final name = AuthSession.name ?? '';
+      final provider = AuthSession.provider ?? 'facebook';
+      final providerToken = AuthSession.providerToken ?? '';
+      final photoUrl = AuthSession.profilePhoto;
+
+      // Step 4: Call Social Login API
+      final apiResponse = await _socialLoginService.socialLogin(
+        email: email,
+        name: name,
+        provider: provider,
+        providerToken: providerToken,
+        photoUrl: photoUrl,
+        fcmToken: GlobalFCM.token ?? "",
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
+      if (apiResponse != null) {
+        // Check if the response contains an error message (specific error conditions)
+        // Only show popup for actual error messages like "A login for this device already exists."
+        if (apiResponse is Map && 
+            apiResponse.containsKey('message') && 
+            (apiResponse['message'].toString().toLowerCase().contains('already') ||
+             apiResponse['message'].toString().toLowerCase().contains('error') ||
+             apiResponse['message'].toString().toLowerCase().contains('failed') ||
+             apiResponse['message'].toString().toLowerCase().contains('invalid') ||
+             apiResponse['message'].toString().toLowerCase().contains('exists'))) {
+          final message = apiResponse['message'];
+          if (mounted) {
+            _showPopup(
+              message: message,
+              type: QuickAlertType.error,
+            );
+          }
+        } else {
+          // Success - navigate to SelectMarketPage silently
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SelectMarketPage()),
+              );
+            }
+          });
+        }
+      } else {
+        if (mounted) {
+          _showPopup(
+            message: "Failed to complete login",
+            type: QuickAlertType.error,
+          );
+        }
       }
     } catch (e) {
-      _showSnack("Facebook login failed", Colors.red);
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        print('Facebook Sign In Error: $e');
+        _showPopup(
+          message: "Facebook login failed: ${e.toString()}",
+          type: QuickAlertType.error,
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isFacebookLoading = false);
       }
     }
+  }
+
+  // ================= POPUP METHOD =================
+  void _showPopup({
+    required String message,
+    required QuickAlertType type,
+  }) {
+    QuickAlert.show(
+      context: context,
+      type: type,
+      text: message,
+      borderRadius: 12,
+      confirmBtnText: "OK",
+    );
   }
 
   // ================= UI =================
@@ -200,7 +389,7 @@ class _LoginFormState extends State<LoginForm> {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: _handleLogin, // ✅ BLOC TRIGGER
+        onPressed: _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.greenCTA,
           shape: RoundedRectangleBorder(
@@ -330,15 +519,6 @@ class _LoginFormState extends State<LoginForm> {
           ),
         ),
       ],
-    );
-  }
-
-  void _showSnack(String msg, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color,
-      ),
     );
   }
 }

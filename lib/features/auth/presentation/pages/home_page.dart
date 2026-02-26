@@ -1,7 +1,21 @@
+// lib/features/auth/presentation/pages/home_page.dart
+//
+// Concessions API shape:
+//   GET /concessions?marketName=X
+//   Response: { "marketId": 1, "concessions": ["Store A", "Store B", ...] }
+//
+// Flow:
+//   • ConcessionBloc  → fetches List<String> names + saves marketId globally
+//   • "All" tab       → shows those names directly (no .name access, no null)
+//   • Category tab    → ConcessionByItemBloc filters by categoryId
+//   • marketId stored in GlobalMarketData (SharedPreferences)
+
 import 'dart:async';
 import 'package:concession_tracker_ui/core/global_item_category.dart';
 import 'package:concession_tracker_ui/core/global_market.dart';
+
 import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/globalmarketdata.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionbyitem/concession_by_item_bloc.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionbyitem/concession_by_item_event.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionbyitem/concession_by_item_state.dart';
@@ -37,23 +51,21 @@ class _HomePageState extends State<HomePage> {
   int _currentOfferPage = 0;
   bool _showAllStores = false;
 
-  // -1 means "All" is selected
+  // -1 = "All" selected
   int _selectedCategoryId = -1;
 
-  // ─── SEARCH FUNCTIONALITY ───────────────────────────
   late TextEditingController _searchController;
   String _searchQuery = '';
-  List<String> _filteredStores = [];
 
   @override
   void initState() {
     super.initState();
     _offerPageController = PageController();
     _startAutoScroll();
-
-    // ─── SEARCH INITIALIZATION ─────────────────────────
     _searchController = TextEditingController();
-    _searchController.addListener(_onSearchChanged);
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.toLowerCase());
+    });
   }
 
   void _startAutoScroll() {
@@ -69,23 +81,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // ─── SEARCH HANDLER ─────────────────────────────────
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
-    });
-  }
-
-  // ─── FILTER STORES BASED ON SEARCH QUERY ───────────
-  List<String> _getFilteredStores(List<String> stores) {
-    if (_searchQuery.isEmpty) {
-      return stores;
-    }
-    return stores
-        .where((store) => store.toLowerCase().contains(_searchQuery))
-        .toList();
-  }
-
   @override
   void dispose() {
     _autoScrollTimer?.cancel();
@@ -94,21 +89,29 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  // ── search filter helper ─────────────────────────────────────────
+  List<String> _filtered(List<String> names) {
+    if (_searchQuery.isEmpty) return names;
+    return names
+        .where((n) => n.toLowerCase().contains(_searchQuery))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // All concessions for the market (used by "All" tab)
+        // Fetches concessions (List<String>) + saves marketId
         BlocProvider(
           create: (_) => sl<ConcessionBloc>()
             ..add(FetchConcessions(GlobalMarket.marketName)),
         ),
-        // Item categories
+        // Fetches category chips
         BlocProvider(
           create: (_) => sl<ItemCategoryBloc>()
             ..add(FetchItemCategories(GlobalMarket.marketName)),
         ),
-        // Concessions filtered by category id
+        // Fetches concessions filtered by category id
         BlocProvider(
           create: (_) => sl<ConcessionByItemBloc>(),
         ),
@@ -126,12 +129,11 @@ class _HomePageState extends State<HomePage> {
                 _search(sw),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding:
-                        EdgeInsets.only(bottom: sw < 360 ? 80 : 100),
+                    padding: EdgeInsets.only(
+                        bottom: sw < 360 ? 80 : 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Only show offers and categories if no search query
                         if (_searchQuery.isEmpty) ...[
                           _title("Today's Offer!", sw),
                           _offers(sw, sh),
@@ -140,16 +142,13 @@ class _HomePageState extends State<HomePage> {
                         ],
                         _title(
                           _searchQuery.isEmpty
-                              ? "Restaurant Near you"
+                              ? 'Restaurant Near you'
                               : 'Search Results',
                           sw,
                           showSeeAll: _searchQuery.isEmpty,
-                          onSeeAllTap: _searchQuery.isEmpty
-                              ? () => setState(
-                                  () => _showAllStores = !_showAllStores)
-                              : null,
+                          onSeeAllTap: () => setState(
+                              () => _showAllStores = !_showAllStores),
                         ),
-                        // Switches between all-concessions and by-category
                         _concessionsSection(ctx, sw, sh),
                       ],
                     ),
@@ -164,7 +163,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // CATEGORIES — horizontal scroll with "All" prepended
+  // CATEGORIES
   // ─────────────────────────────────────────────────────────────────
   Widget _categoriesSection(BuildContext context, double sw) {
     return BlocBuilder<ItemCategoryBloc, ItemCategoryState>(
@@ -176,7 +175,6 @@ class _HomePageState extends State<HomePage> {
             child: const Center(child: CircularProgressIndicator()),
           );
         }
-
         if (state is ItemCategoryError) {
           return Padding(
             padding: EdgeInsets.symmetric(horizontal: sw * 0.04),
@@ -185,71 +183,55 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.red[400], fontSize: sw * 0.035)),
           );
         }
-
         if (state is ItemCategoryLoaded) {
           return SizedBox(
             height: sw * 0.30,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding:
-                  EdgeInsets.symmetric(horizontal: sw * 0.04),
-              // +1 for the "All" item at index 0
-              itemCount: state.categories.length + 1,
+              padding: EdgeInsets.symmetric(horizontal: sw * 0.04),
+              itemCount: state.categories.length + 1, // +1 for "All"
               itemBuilder: (context, index) {
                 // ── "All" chip ──────────────────────────────────
                 if (index == 0) {
-                  final isSelected = _selectedCategoryId == -1;
                   return Padding(
                     padding: EdgeInsets.only(right: sw * 0.04),
                     child: GestureDetector(
                       onTap: () {
                         setState(() => _selectedCategoryId = -1);
-                        // Trigger the all-concessions BLoC
                         context
                             .read<ConcessionBloc>()
-                            .add(FetchConcessions(
-                                GlobalMarket.marketName));
+                            .add(FetchConcessions(GlobalMarket.marketName));
                       },
                       child: _categoryCard(
                         'All',
                         sw,
-                        isSelected: isSelected,
+                        isSelected: _selectedCategoryId == -1,
                         icon: Icons.grid_view_rounded,
                       ),
                     ),
                   );
                 }
 
-                // ── Regular category chips ──────────────────────
                 final cat = state.categories[index - 1];
-                final isSelected =
-                    _selectedCategoryId == cat.categoryId;
-
                 return Padding(
                   padding: EdgeInsets.only(right: sw * 0.04),
                   child: GestureDetector(
                     onTap: () async {
-                      setState(
-                          () => _selectedCategoryId = cat.categoryId);
-
-                      // Persist selection
+                      setState(() => _selectedCategoryId = cat.categoryId);
                       await GlobalItemCategory.setCategory(
                         id: cat.categoryId,
                         name: cat.categoryName,
                       );
-
-                      // Fetch concessions for this category
                       if (context.mounted) {
                         context
                             .read<ConcessionByItemBloc>()
-                            .add(FetchConcessionsByItem(
-                                cat.categoryId));
+                            .add(FetchConcessionsByItem(cat.categoryId));
                       }
                     },
                     child: _categoryCard(
                       cat.categoryName,
                       sw,
-                      isSelected: isSelected,
+                      isSelected: _selectedCategoryId == cat.categoryId,
                     ),
                   ),
                 );
@@ -257,7 +239,6 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         }
-
         return const SizedBox.shrink();
       },
     );
@@ -279,10 +260,14 @@ class _HomePageState extends State<HomePage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: isSelected
-                ? const LinearGradient(
-                    colors: [AppColors.gradientBottom, AppColors.gradientTop])
-                : const LinearGradient(
-                    colors: [Color(0xFFB0BEC5), Color(0xFF90A4AE)]),
+                ? const LinearGradient(colors: [
+                    AppColors.gradientBottom,
+                    AppColors.gradientTop
+                  ])
+                : const LinearGradient(colors: [
+                    Color(0xFFB0BEC5),
+                    Color(0xFF90A4AE)
+                  ]),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -304,9 +289,8 @@ class _HomePageState extends State<HomePage> {
               fontSize: sw * 0.027,
               fontWeight:
                   isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? AppColors.gradientTop
-                  : Colors.black87,
+              color:
+                  isSelected ? AppColors.gradientTop : Colors.black87,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -317,16 +301,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // CONCESSIONS SECTION — switches based on selected category
+  // ─────────────────────────────────────────────────────────────────
   Widget _concessionsSection(
       BuildContext context, double sw, double sh) {
-    // "All" selected → use ConcessionBloc (market-wide list)
-    if (_selectedCategoryId == -1) {
-      return _allConcessionsView(context, sw, sh);
-    }
-    // Category selected → use ConcessionByItemBloc
-    return _concessionsByItemView(context, sw, sh);
+    return _selectedCategoryId == -1
+        ? _allConcessionsView(context, sw, sh)
+        : _concessionsByItemView(context, sw, sh);
   }
 
+  // ── "All" tab → concessions from ConcessionBloc (List<String>) ──
   Widget _allConcessionsView(
       BuildContext context, double sw, double sh) {
     return BlocBuilder<ConcessionBloc, ConcessionState>(
@@ -337,6 +322,7 @@ class _HomePageState extends State<HomePage> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
+
         if (state is ConcessionError) {
           return _errorWidget(
             sw,
@@ -346,44 +332,38 @@ class _HomePageState extends State<HomePage> {
                 .add(FetchConcessions(GlobalMarket.marketName)),
           );
         }
+
         if (state is ConcessionLoaded) {
+          // ── Log marketId confirmation ──────────────────────
+          print('[HomePage] marketId = ${GlobalMarketData.marketId}');
+          print('[HomePage] concessions count = ${state.concessions.length}');
+
           if (state.concessions.isEmpty) {
             return _emptyWidget(sw, 'No concessions for this market.');
           }
-          // Apply search filter
-          _filteredStores = _getFilteredStores(
-              state.concessions.map((c) => c.name).toList());
 
-          // Show "no results" if search returns nothing
-          if (_filteredStores.isEmpty && _searchQuery.isNotEmpty) {
-            return _noSearchResultsWidget(sw);
+          // state.concessions is already List<String> — zero null risk
+          final names = _filtered(state.concessions);
+
+          if (names.isEmpty && _searchQuery.isNotEmpty) {
+            return _noResultsWidget(sw);
           }
 
-          return _storeList(
-            context,
-            sw,
-            sh,
-            names: _filteredStores,
-          );
+          return _storeList(context, sw, sh, names: names);
         }
+
         return const SizedBox.shrink();
       },
     );
   }
 
-
+  // ── Category tab → ConcessionByItemBloc ─────────────────────────
   Widget _concessionsByItemView(
       BuildContext context, double sw, double sh) {
     return BlocBuilder<ConcessionByItemBloc, ConcessionByItemState>(
       builder: (context, state) {
-        if (state is ConcessionByItemInitial) {
-          // Nothing fetched yet — user just tapped a category
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (state is ConcessionByItemLoading) {
+        if (state is ConcessionByItemInitial ||
+            state is ConcessionByItemLoading) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(child: CircularProgressIndicator()),
@@ -400,68 +380,27 @@ class _HomePageState extends State<HomePage> {
         }
         if (state is ConcessionByItemLoaded) {
           if (state.concessions.isEmpty) {
-            return _emptyWidget(
-                sw, 'No concessions for this category.');
-          }
-          // Apply search filter
-          _filteredStores = _getFilteredStores(
-              state.concessions.map((c) => c.concessionName).toList());
-
-          // Show "no results" if search returns nothing
-          if (_filteredStores.isEmpty && _searchQuery.isNotEmpty) {
-            return _noSearchResultsWidget(sw);
+            return _emptyWidget(sw, 'No concessions for this category.');
           }
 
-          return _storeList(
-            context,
-            sw,
-            sh,
-            names: _filteredStores,
-          );
+          // concessionName is a String field on ConcessionByItem entity
+          final names =
+              _filtered(state.concessions.map((c) => c.concessionName).toList());
+
+          if (names.isEmpty && _searchQuery.isNotEmpty) {
+            return _noResultsWidget(sw);
+          }
+
+          return _storeList(context, sw, sh, names: names);
         }
         return const SizedBox.shrink();
       },
     );
   }
 
-
-  Widget _noSearchResultsWidget(double sw) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: sw * 0.1),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.search_off,
-              color: Colors.grey.shade400,
-              size: sw * 0.2,
-            ),
-            SizedBox(height: sw * 0.04),
-            Text(
-              'No stores found for "$_searchQuery"',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: sw * 0.045,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: sw * 0.02),
-            Text(
-              'Try searching with different keywords',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: sw * 0.035,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
+  // ─────────────────────────────────────────────────────────────────
+  // STORE LIST
+  // ─────────────────────────────────────────────────────────────────
   Widget _storeList(
     BuildContext context,
     double sw,
@@ -473,49 +412,50 @@ class _HomePageState extends State<HomePage> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
         child: Column(
-          children: names.map((name) {
-            return Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: sw * 0.04, vertical: sw * 0.02),
-              child:
-                  _storeCardVertical(context, name: name, sw: sw),
-            );
-          }).toList(),
-        ),
-      );
-    } else {
-      final storeH = sh * 0.18;
-      final storeW = sw * 0.75;
-      return SizedBox(
-        height: storeH,
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.only(left: sw * 0.04),
-          itemCount: names.length,
-          itemBuilder: (context, i) => Padding(
-            padding: EdgeInsets.only(right: sw * 0.04),
-            child: _storeCard(context,
-                name: names[i],
-                width: storeW,
-                height: storeH,
-                sw: sw),
-          ),
+          children: names
+              .map((name) => Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: sw * 0.04, vertical: sw * 0.02),
+                    child: _storeCardVertical(context,
+                        name: name, sw: sw),
+                  ))
+              .toList(),
         ),
       );
     }
+
+    final storeH = sh * 0.18;
+    final storeW = sw * 0.75;
+    return SizedBox(
+      height: storeH,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.only(left: sw * 0.04),
+        itemCount: names.length,
+        itemBuilder: (context, i) => Padding(
+          padding: EdgeInsets.only(right: sw * 0.04),
+          child: _storeCard(context,
+              name: names[i],
+              width: storeW,
+              height: storeH,
+              sw: sw),
+        ),
+      ),
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SHARED ERROR / EMPTY WIDGETS
+  // UTILITY WIDGETS
   // ─────────────────────────────────────────────────────────────────
   Widget _errorWidget(double sw,
       {required String message, required VoidCallback onRetry}) {
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: 16),
+      padding: EdgeInsets.symmetric(
+          horizontal: sw * 0.04, vertical: 16),
       child: Column(
         children: [
-          Icon(Icons.error_outline, color: Colors.red[300], size: 36),
+          Icon(Icons.error_outline,
+              color: Colors.red[300], size: 36),
           const SizedBox(height: 8),
           Text(message,
               textAlign: TextAlign.center,
@@ -533,11 +473,42 @@ class _HomePageState extends State<HomePage> {
 
   Widget _emptyWidget(double sw, String message) {
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: 16),
+      padding: EdgeInsets.symmetric(
+          horizontal: sw * 0.04, vertical: 16),
       child: Text(message,
-          style: TextStyle(
-              color: Colors.grey[500], fontSize: sw * 0.038)),
+          style:
+              TextStyle(color: Colors.grey[500], fontSize: sw * 0.038)),
+    );
+  }
+
+  Widget _noResultsWidget(double sw) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: sw * 0.1),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off,
+                color: Colors.grey.shade400, size: sw * 0.2),
+            SizedBox(height: sw * 0.04),
+            Text(
+              'No stores found for "$_searchQuery"',
+              style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: sw * 0.045,
+                  fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: sw * 0.02),
+            Text(
+              'Try searching with different keywords',
+              style: TextStyle(
+                  color: Colors.grey.shade500, fontSize: sw * 0.035),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -569,28 +540,26 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           SizedBox(width: sw * 0.04),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                GlobalUser.name.isNotEmpty
-                    ? GlobalUser.name
-                    : 'Welcome',
-                style: TextStyle(
-                    color: Colors.white70, fontSize: sw * 0.032),
-              ),
-              SizedBox(height: sw * 0.005),
-              Text(
-                GlobalMarket.marketName,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: sw * 0.045,
-                    fontWeight: FontWeight.bold),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  GlobalUser.name.isNotEmpty ? GlobalUser.name : 'Welcome',
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: sw * 0.032),
+                ),
+                SizedBox(height: sw * 0.005),
+                Text(
+                  GlobalMarket.marketName,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: sw * 0.045,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
-          SizedBox(width: sw * 0.03),
           GestureDetector(
             onTap: () => Navigator.push(
                 context,
@@ -636,7 +605,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // SEARCH — NOW WITH FULL FUNCTIONALITY
+  // SEARCH
   // ─────────────────────────────────────────────────────────────────
   Widget _search(double sw) {
     return Padding(
@@ -658,8 +627,8 @@ class _HomePageState extends State<HomePage> {
           cursorColor: Colors.black,
           decoration: InputDecoration(
             hintText: 'Search restaurants...',
-            hintStyle: TextStyle(
-                color: Colors.grey[400], fontSize: sw * 0.04),
+            hintStyle:
+                TextStyle(color: Colors.grey[400], fontSize: sw * 0.04),
             prefixIcon: Icon(Icons.search,
                 color: Colors.grey[600], size: sw * 0.06),
             suffixIcon: _searchQuery.isNotEmpty
@@ -698,8 +667,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(text,
               style: TextStyle(
-                  fontSize: sw * 0.05,
-                  fontWeight: FontWeight.bold)),
+                  fontSize: sw * 0.05, fontWeight: FontWeight.bold)),
           const Spacer(),
           if (showSeeAll && onSeeAllTap != null)
             GestureDetector(
@@ -763,9 +731,10 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.bold)),
                 SizedBox(height: sw * 0.02),
                 Text(
-                    'Discover discounts in your\nfavorite local restaurants',
-                    style: TextStyle(
-                        color: Colors.white, fontSize: sw * 0.035)),
+                  'Discover discounts in your\nfavorite local restaurants',
+                  style: TextStyle(
+                      color: Colors.white, fontSize: sw * 0.035),
+                ),
                 const Spacer(),
                 Container(
                   padding: EdgeInsets.symmetric(
@@ -794,7 +763,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STORE CARD HORIZONTAL
+  // STORE CARD — HORIZONTAL
   // ─────────────────────────────────────────────────────────────────
   Widget _storeCard(BuildContext context,
       {required String name,
@@ -856,14 +825,15 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
-                        child: Text(name,
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: nf,
-                                height: 1.2),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis)),
+                      child: Text(name,
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: nf,
+                              height: 1.2),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
                     Container(
                       alignment: Alignment.center,
                       padding: EdgeInsets.symmetric(vertical: bp),
@@ -887,7 +857,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // STORE CARD VERTICAL
+  // STORE CARD — VERTICAL (See All mode)
   // ─────────────────────────────────────────────────────────────────
   Widget _storeCardVertical(BuildContext context,
       {required String name, required double sw}) {
@@ -943,14 +913,15 @@ class _HomePageState extends State<HomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
-                        child: Text(name,
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: nf,
-                                height: 1.2),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis)),
+                      child: Text(name,
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: nf,
+                              height: 1.2),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
                     Container(
                       alignment: Alignment.center,
                       padding: EdgeInsets.symmetric(vertical: bp),
