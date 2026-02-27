@@ -1,4 +1,5 @@
 import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/global_ordno.dart';
 import 'package:concession_tracker_ui/core/user_storage.dart';
 import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:concession_tracker_ui/notification.dart';
@@ -24,6 +25,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Ordno.load();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,

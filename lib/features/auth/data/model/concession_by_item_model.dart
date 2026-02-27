@@ -3,11 +3,15 @@
 import '../../domain/entities/concession_by_item.dart';
 
 class ConcessionByItemModel extends ConcessionByItem {
-  const ConcessionByItemModel({required super.concessionName});
+  const ConcessionByItemModel({
+    required super.concessionId,
+    required super.concessionName,
+  });
 
   factory ConcessionByItemModel.fromJson(Map<String, dynamic> json) {
     return ConcessionByItemModel(
-      concessionName: json['concessionName'] as String,
+      concessionId: (json['concessionId'] as num?)?.toInt() ?? 0,
+      concessionName: json['concessionName'] as String? ?? '',
     );
   }
 }

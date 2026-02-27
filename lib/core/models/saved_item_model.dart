@@ -1,37 +1,40 @@
-class SavedItemModel {
-  final String concessionName;
+class SaveItemRequest {
+  final int concessionId;
   final int itemId;
+  final int customerId;
+  final int categoryId;
   final String itemName;
   final double itemPrice;
-  final int categoryId;
 
-  SavedItemModel({
-    required this.concessionName,
+  SaveItemRequest({
+    required this.concessionId,
     required this.itemId,
+    required this.customerId,
+    required this.categoryId,
     required this.itemName,
     required this.itemPrice,
-    required this.categoryId,
   });
 
-  // From JSON
-  factory SavedItemModel.fromJson(Map<String, dynamic> json) {
-    return SavedItemModel(
-      concessionName: json['concessionName'] ?? '',
-      itemId: json['itemId'] ?? 0,
-      itemName: json['itemName'] ?? 'Unknown Item',
-      itemPrice: (json['itemPrice'] ?? 0).toDouble(),
-      categoryId: json['categoryId'] ?? 0,
-    );
-  }
-
-  // To JSON
   Map<String, dynamic> toJson() {
     return {
-      'concessionName': concessionName,
+      'concessionId': concessionId,
       'itemId': itemId,
+      'customerId': customerId,
+      'categoryId': categoryId,
       'itemName': itemName,
       'itemPrice': itemPrice,
-      'categoryId': categoryId,
     };
+  }
+}
+
+class SaveItemResponse {
+  final String message;
+
+  SaveItemResponse({required this.message});
+
+  factory SaveItemResponse.fromJson(Map<String, dynamic> json) {
+    return SaveItemResponse(
+      message: json['message'] ?? '',
+    );
   }
 }

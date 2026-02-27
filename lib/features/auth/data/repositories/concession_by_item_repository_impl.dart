@@ -10,7 +10,16 @@ class ConcessionByItemRepositoryImpl implements ConcessionByItemRepository {
   ConcessionByItemRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<List<ConcessionByItem>> getConcessionsByItem(int itemId) async {
-    return await remoteDataSource.getConcessionsByItem(itemId);
+  Future<List<ConcessionByItem>> getConcessionsByCategory({
+    required int marketId,
+    required int categoryId,
+  }) {
+    return remoteDataSource.getConcessionsByCategory(
+      marketId: marketId,
+      categoryId: categoryId,
+    );
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

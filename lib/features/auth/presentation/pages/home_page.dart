@@ -1,19 +1,6 @@
-// lib/features/auth/presentation/pages/home_page.dart
-//
-// Concessions API shape:
-//   GET /concessions?marketName=X
-//   Response: { "marketId": 1, "concessions": ["Store A", "Store B", ...] }
-//
-// Flow:
-//   • ConcessionBloc  → fetches List<String> names + saves marketId globally
-//   • "All" tab       → shows those names directly (no .name access, no null)
-//   • Category tab    → ConcessionByItemBloc filters by categoryId
-//   • marketId stored in GlobalMarketData (SharedPreferences)
-
 import 'dart:async';
 import 'package:concession_tracker_ui/core/global_item_category.dart';
 import 'package:concession_tracker_ui/core/global_market.dart';
-
 import 'package:concession_tracker_ui/core/global_user.dart';
 import 'package:concession_tracker_ui/core/globalmarketdata.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionbyitem/concession_by_item_bloc.dart';
@@ -63,9 +50,8 @@ class _HomePageState extends State<HomePage> {
     _offerPageController = PageController();
     _startAutoScroll();
     _searchController = TextEditingController();
-    _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.toLowerCase());
-    });
+    _searchController.addListener(
+        () => setState(() => _searchQuery = _searchController.text.toLowerCase()));
   }
 
   void _startAutoScroll() {
@@ -89,29 +75,26 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // ── search filter helper ─────────────────────────────────────────
   List<String> _filtered(List<String> names) {
     if (_searchQuery.isEmpty) return names;
-    return names
-        .where((n) => n.toLowerCase().contains(_searchQuery))
-        .toList();
+    return names.where((n) => n.toLowerCase().contains(_searchQuery)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Fetches concessions (List<String>) + saves marketId
+        // All concessions for market — also saves marketId to GlobalMarketData
         BlocProvider(
           create: (_) => sl<ConcessionBloc>()
             ..add(FetchConcessions(GlobalMarket.marketName)),
         ),
-        // Fetches category chips
+        // Category chips
         BlocProvider(
           create: (_) => sl<ItemCategoryBloc>()
             ..add(FetchItemCategories(GlobalMarket.marketName)),
         ),
-        // Fetches concessions filtered by category id
+        // Concessions filtered by category (new endpoint)
         BlocProvider(
           create: (_) => sl<ConcessionByItemBloc>(),
         ),
@@ -129,8 +112,7 @@ class _HomePageState extends State<HomePage> {
                 _search(sw),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.only(
-                        bottom: sw < 360 ? 80 : 100),
+                    padding: EdgeInsets.only(bottom: sw < 360 ? 80 : 100),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -146,8 +128,8 @@ class _HomePageState extends State<HomePage> {
                               : 'Search Results',
                           sw,
                           showSeeAll: _searchQuery.isEmpty,
-                          onSeeAllTap: () => setState(
-                              () => _showAllStores = !_showAllStores),
+                          onSeeAllTap: () =>
+                              setState(() => _showAllStores = !_showAllStores),
                         ),
                         _concessionsSection(ctx, sw, sh),
                       ],
@@ -189,7 +171,7 @@ class _HomePageState extends State<HomePage> {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.symmetric(horizontal: sw * 0.04),
-              itemCount: state.categories.length + 1, // +1 for "All"
+              itemCount: state.categories.length + 1,
               itemBuilder: (context, index) {
                 // ── "All" chip ──────────────────────────────────
                 if (index == 0) {
@@ -218,14 +200,21 @@ class _HomePageState extends State<HomePage> {
                   child: GestureDetector(
                     onTap: () async {
                       setState(() => _selectedCategoryId = cat.categoryId);
+
+                      // Persist selected category
                       await GlobalItemCategory.setCategory(
                         id: cat.categoryId,
                         name: cat.categoryName,
                       );
+
                       if (context.mounted) {
-                        context
-                            .read<ConcessionByItemBloc>()
-                            .add(FetchConcessionsByItem(cat.categoryId));
+                        // ── NEW API: pass marketId + categoryId ──
+                        context.read<ConcessionByItemBloc>().add(
+                          FetchConcessionsByItem(
+                            marketId: GlobalMarketData.marketId,
+                            categoryId: cat.categoryId,
+                          ),
+                        );
                       }
                     },
                     child: _categoryCard(
@@ -260,14 +249,10 @@ class _HomePageState extends State<HomePage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: isSelected
-                ? const LinearGradient(colors: [
-                    AppColors.gradientBottom,
-                    AppColors.gradientTop
-                  ])
-                : const LinearGradient(colors: [
-                    Color(0xFFB0BEC5),
-                    Color(0xFF90A4AE)
-                  ]),
+                ? const LinearGradient(
+                    colors: [AppColors.gradientBottom, AppColors.gradientTop])
+                : const LinearGradient(
+                    colors: [Color(0xFFB0BEC5), Color(0xFF90A4AE)]),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -287,10 +272,8 @@ class _HomePageState extends State<HomePage> {
             label,
             style: TextStyle(
               fontSize: sw * 0.027,
-              fontWeight:
-                  isSelected ? FontWeight.bold : FontWeight.normal,
-              color:
-                  isSelected ? AppColors.gradientTop : Colors.black87,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? AppColors.gradientTop : Colors.black87,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -302,18 +285,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // CONCESSIONS SECTION — switches based on selected category
+  // CONCESSIONS SECTION
   // ─────────────────────────────────────────────────────────────────
-  Widget _concessionsSection(
-      BuildContext context, double sw, double sh) {
+  Widget _concessionsSection(BuildContext context, double sw, double sh) {
     return _selectedCategoryId == -1
         ? _allConcessionsView(context, sw, sh)
         : _concessionsByItemView(context, sw, sh);
   }
 
-  // ── "All" tab → concessions from ConcessionBloc (List<String>) ──
-  Widget _allConcessionsView(
-      BuildContext context, double sw, double sh) {
+  Widget _allConcessionsView(BuildContext context, double sw, double sh) {
     return BlocBuilder<ConcessionBloc, ConcessionState>(
       builder: (context, state) {
         if (state is ConcessionLoading || state is ConcessionInitial) {
@@ -322,7 +302,6 @@ class _HomePageState extends State<HomePage> {
             child: Center(child: CircularProgressIndicator()),
           );
         }
-
         if (state is ConcessionError) {
           return _errorWidget(
             sw,
@@ -332,34 +311,26 @@ class _HomePageState extends State<HomePage> {
                 .add(FetchConcessions(GlobalMarket.marketName)),
           );
         }
-
         if (state is ConcessionLoaded) {
-          // ── Log marketId confirmation ──────────────────────
-          print('[HomePage] marketId = ${GlobalMarketData.marketId}');
-          print('[HomePage] concessions count = ${state.concessions.length}');
+          print('[HomePage] marketId=${GlobalMarketData.marketId} '
+              'concessions=${state.concessions.length}');
 
           if (state.concessions.isEmpty) {
             return _emptyWidget(sw, 'No concessions for this market.');
           }
 
-          // state.concessions is already List<String> — zero null risk
           final names = _filtered(state.concessions);
-
           if (names.isEmpty && _searchQuery.isNotEmpty) {
             return _noResultsWidget(sw);
           }
-
           return _storeList(context, sw, sh, names: names);
         }
-
         return const SizedBox.shrink();
       },
     );
   }
 
-  // ── Category tab → ConcessionByItemBloc ─────────────────────────
-  Widget _concessionsByItemView(
-      BuildContext context, double sw, double sh) {
+  Widget _concessionsByItemView(BuildContext context, double sw, double sh) {
     return BlocBuilder<ConcessionByItemBloc, ConcessionByItemState>(
       builder: (context, state) {
         if (state is ConcessionByItemInitial ||
@@ -373,9 +344,12 @@ class _HomePageState extends State<HomePage> {
           return _errorWidget(
             sw,
             message: 'Could not load concessions.\n${state.message}',
-            onRetry: () => context
-                .read<ConcessionByItemBloc>()
-                .add(FetchConcessionsByItem(_selectedCategoryId)),
+            onRetry: () => context.read<ConcessionByItemBloc>().add(
+                  FetchConcessionsByItem(
+                    marketId: GlobalMarketData.marketId,
+                    categoryId: _selectedCategoryId,
+                  ),
+                ),
           );
         }
         if (state is ConcessionByItemLoaded) {
@@ -383,7 +357,6 @@ class _HomePageState extends State<HomePage> {
             return _emptyWidget(sw, 'No concessions for this category.');
           }
 
-          // concessionName is a String field on ConcessionByItem entity
           final names =
               _filtered(state.concessions.map((c) => c.concessionName).toList());
 
@@ -401,12 +374,8 @@ class _HomePageState extends State<HomePage> {
   // ─────────────────────────────────────────────────────────────────
   // STORE LIST
   // ─────────────────────────────────────────────────────────────────
-  Widget _storeList(
-    BuildContext context,
-    double sw,
-    double sh, {
-    required List<String> names,
-  }) {
+  Widget _storeList(BuildContext context, double sw, double sh,
+      {required List<String> names}) {
     if (_showAllStores) {
       return AnimatedSize(
         duration: const Duration(milliseconds: 300),
@@ -416,8 +385,7 @@ class _HomePageState extends State<HomePage> {
               .map((name) => Padding(
                     padding: EdgeInsets.symmetric(
                         horizontal: sw * 0.04, vertical: sw * 0.02),
-                    child: _storeCardVertical(context,
-                        name: name, sw: sw),
+                    child: _storeCardVertical(context, name: name, sw: sw),
                   ))
               .toList(),
         ),
@@ -435,10 +403,7 @@ class _HomePageState extends State<HomePage> {
         itemBuilder: (context, i) => Padding(
           padding: EdgeInsets.only(right: sw * 0.04),
           child: _storeCard(context,
-              name: names[i],
-              width: storeW,
-              height: storeH,
-              sw: sw),
+              name: names[i], width: storeW, height: storeH, sw: sw),
         ),
       ),
     );
@@ -450,17 +415,14 @@ class _HomePageState extends State<HomePage> {
   Widget _errorWidget(double sw,
       {required String message, required VoidCallback onRetry}) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-          horizontal: sw * 0.04, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: 16),
       child: Column(
         children: [
-          Icon(Icons.error_outline,
-              color: Colors.red[300], size: 36),
+          Icon(Icons.error_outline, color: Colors.red[300], size: 36),
           const SizedBox(height: 8),
           Text(message,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Colors.red[400], fontSize: sw * 0.035)),
+              style: TextStyle(color: Colors.red[400], fontSize: sw * 0.035)),
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
@@ -473,11 +435,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _emptyWidget(double sw, String message) {
     return Padding(
-      padding: EdgeInsets.symmetric(
-          horizontal: sw * 0.04, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: sw * 0.04, vertical: 16),
       child: Text(message,
-          style:
-              TextStyle(color: Colors.grey[500], fontSize: sw * 0.038)),
+          style: TextStyle(color: Colors.grey[500], fontSize: sw * 0.038)),
     );
   }
 
@@ -535,8 +495,7 @@ class _HomePageState extends State<HomePage> {
           Builder(
             builder: (ctx) => GestureDetector(
               onTap: () => Scaffold.of(ctx).openDrawer(),
-              child: Icon(Icons.menu,
-                  color: Colors.white, size: sw * 0.07),
+              child: Icon(Icons.menu, color: Colors.white, size: sw * 0.07),
             ),
           ),
           SizedBox(width: sw * 0.04),
@@ -561,14 +520,10 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const NotificationPage())),
-            child: _headerIconButton(
-                Icons.notifications_outlined,
-                badge: '2',
-                sw: sw),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const NotificationPage())),
+            child: _headerIconButton(Icons.notifications_outlined,
+                badge: '2', sw: sw),
           ),
         ],
       ),
@@ -583,8 +538,7 @@ class _HomePageState extends State<HomePage> {
         CircleAvatar(
           radius: sw * 0.055,
           backgroundColor: Colors.white,
-          child: Icon(icon,
-              color: AppColors.gradientTop, size: sw * 0.06),
+          child: Icon(icon, color: AppColors.gradientTop, size: sw * 0.06),
         ),
         if (badge != null)
           Positioned(
@@ -609,8 +563,7 @@ class _HomePageState extends State<HomePage> {
   // ─────────────────────────────────────────────────────────────────
   Widget _search(double sw) {
     return Padding(
-      padding:
-          EdgeInsets.fromLTRB(sw * 0.04, sw * 0.04, sw * 0.04, 0),
+      padding: EdgeInsets.fromLTRB(sw * 0.04, sw * 0.04, sw * 0.04, 0),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -629,8 +582,8 @@ class _HomePageState extends State<HomePage> {
             hintText: 'Search restaurants...',
             hintStyle:
                 TextStyle(color: Colors.grey[400], fontSize: sw * 0.04),
-            prefixIcon: Icon(Icons.search,
-                color: Colors.grey[600], size: sw * 0.06),
+            prefixIcon:
+                Icon(Icons.search, color: Colors.grey[600], size: sw * 0.06),
             suffixIcon: _searchQuery.isNotEmpty
                 ? GestureDetector(
                     onTap: () {
@@ -647,8 +600,7 @@ class _HomePageState extends State<HomePage> {
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none),
-            contentPadding:
-                EdgeInsets.symmetric(vertical: sw * 0.04),
+            contentPadding: EdgeInsets.symmetric(vertical: sw * 0.04),
           ),
         ),
       ),
@@ -697,19 +649,17 @@ class _HomePageState extends State<HomePage> {
         children: [
           Padding(
               padding: EdgeInsets.only(left: sw * 0.04),
-              child: _offerCard(
-                  '30% OFF', 'assets/burger.png', ow, oh, sw)),
+              child: _offerCard('30% OFF', 'assets/burger.png', ow, oh, sw)),
           Padding(
               padding: EdgeInsets.only(left: sw * 0.04),
-              child: _offerCard(
-                  '25% OFF', 'assets/pizza.png', ow, oh, sw)),
+              child: _offerCard('25% OFF', 'assets/pizza.png', ow, oh, sw)),
         ],
       ),
     );
   }
 
-  Widget _offerCard(String discount, String image, double w,
-      double h, double sw) {
+  Widget _offerCard(
+      String discount, String image, double w, double h, double sw) {
     return Container(
       width: w,
       decoration: BoxDecoration(
@@ -732,8 +682,8 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(height: sw * 0.02),
                 Text(
                   'Discover discounts in your\nfavorite local restaurants',
-                  style: TextStyle(
-                      color: Colors.white, fontSize: sw * 0.035),
+                  style:
+                      TextStyle(color: Colors.white, fontSize: sw * 0.035),
                 ),
                 const Spacer(),
                 Container(
@@ -780,8 +730,7 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(
               builder: (_) => StoreMenuPage(
-                  storeName: name,
-                  storeImage: 'assets/store_1.png'))),
+                  storeName: name, storeImage: 'assets/store_1.png'))),
       child: Container(
         width: width,
         height: height,
@@ -812,10 +761,8 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 padding: EdgeInsets.all(cp),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    AppColors.gradientTop,
-                    AppColors.gradientBottom
-                  ]),
+                  gradient: LinearGradient(
+                      colors: [AppColors.gradientTop, AppColors.gradientBottom]),
                   borderRadius: BorderRadius.only(
                       topRight: Radius.circular(20),
                       bottomRight: Radius.circular(20)),
@@ -871,8 +818,7 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(
               builder: (_) => StoreMenuPage(
-                  storeName: name,
-                  storeImage: 'assets/store_1.png'))),
+                  storeName: name, storeImage: 'assets/store_1.png'))),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -891,19 +837,15 @@ class _HomePageState extends State<HomePage> {
                   topLeft: Radius.circular(20),
                   bottomLeft: Radius.circular(20)),
               child: Image.asset('assets/store_1.png',
-                  width: sw * 0.35,
-                  height: sw * 0.35,
-                  fit: BoxFit.cover),
+                  width: sw * 0.35, height: sw * 0.35, fit: BoxFit.cover),
             ),
             Expanded(
               child: Container(
                 height: sw * 0.35,
                 padding: EdgeInsets.all(cp),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [
-                    AppColors.gradientTop,
-                    AppColors.gradientBottom
-                  ]),
+                  gradient: LinearGradient(
+                      colors: [AppColors.gradientTop, AppColors.gradientBottom]),
                   borderRadius: BorderRadius.only(
                       topRight: Radius.circular(20),
                       bottomRight: Radius.circular(20)),

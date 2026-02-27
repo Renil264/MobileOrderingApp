@@ -3,5 +3,10 @@
 import '../entities/concession_by_item.dart';
 
 abstract class ConcessionByItemRepository {
-  Future<List<ConcessionByItem>> getConcessionsByItem(int itemId);
+  /// Fetches concessions filtered by [marketId] and [categoryId].
+  /// Maps to GET /concessions-by-category/{marketId}/{categoryId}
+  Future<List<ConcessionByItem>> getConcessionsByCategory({
+    required int marketId,
+    required int categoryId,
+  });
 }

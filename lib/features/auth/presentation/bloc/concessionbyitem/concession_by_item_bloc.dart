@@ -9,28 +9,44 @@ class ConcessionByItemBloc
     extends Bloc<ConcessionByItemEvent, ConcessionByItemState> {
   final GetConcessionsByItemUseCase getConcessionsByItem;
 
-  // Cache of all concessions for the "All" tab
-  List<dynamic> _allConcessions = [];
-
   ConcessionByItemBloc({required this.getConcessionsByItem})
       : super(ConcessionByItemInitial()) {
-    on<FetchConcessionsByItem>(_onFetchByItem);
+    on<FetchConcessionsByItem>(_onFetchByCategory);
     on<LoadAllConcessions>(_onLoadAll);
   }
 
-  Future<void> _onFetchByItem(
+  Future<void> _onFetchByCategory(
     FetchConcessionsByItem event,
     Emitter<ConcessionByItemState> emit,
   ) async {
     emit(ConcessionByItemLoading());
     try {
-      final concessions =
-          await getConcessionsByItem(event.itemId);
+      print('══════════════════════════════════════');
+      print('[ConcessionByItemBloc] FetchConcessionsByItem');
+      print('  marketId   : ${event.marketId}');
+      print('  categoryId : ${event.categoryId}');
+      print('══════════════════════════════════════');
+
+      if (event.marketId == 0) {
+        emit(ConcessionByItemError(
+            'marketId is 0 — market data not loaded yet. '
+            'Please return to the market selection screen.'));
+        return;
+      }
+
+      final concessions = await getConcessionsByItem(
+        marketId: event.marketId,
+        categoryId: event.categoryId,
+      );
+
+      print('[ConcessionByItemBloc] Loaded ${concessions.length} concessions');
+
       emit(ConcessionByItemLoaded(
         concessions,
-        selectedCategoryId: event.itemId,
+        selectedCategoryId: event.categoryId,
       ));
     } catch (e) {
+      print('[ConcessionByItemBloc] Error: $e');
       emit(ConcessionByItemError(e.toString()));
     }
   }
@@ -39,10 +55,7 @@ class ConcessionByItemBloc
     LoadAllConcessions event,
     Emitter<ConcessionByItemState> emit,
   ) async {
-    // "All" tab — emit loaded with no filter (selectedCategoryId = null)
-    emit(ConcessionByItemLoaded(
-      const [],
-      selectedCategoryId: null,
-    ));
+    // "All" tab — no category filter, emit empty loaded state
+    emit(ConcessionByItemLoaded(const [], selectedCategoryId: null));
   }
 }

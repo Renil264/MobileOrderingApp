@@ -8,7 +8,13 @@ class GetConcessionsByItemUseCase {
 
   GetConcessionsByItemUseCase(this.repository);
 
-  Future<List<ConcessionByItem>> call(int itemId) {
-    return repository.getConcessionsByItem(itemId);
+  Future<List<ConcessionByItem>> call({
+    required int marketId,
+    required int categoryId,
+  }) {
+    return repository.getConcessionsByCategory(
+      marketId: marketId,
+      categoryId: categoryId,
+    );
   }
 }
