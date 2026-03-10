@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:concession_tracker_ui/core/global_ordno.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+ // Import the global class
 
 class CreateOrderService {
   static const String _baseUrl =
@@ -32,6 +34,9 @@ class CreateOrderService {
       // ── Save orderNo to SharedPreferences ──────────────────────
       await _saveOrderNo(result.orderNo);
 
+      // ── Save orderNo globally ──────────────────────────────────
+      GlobalOrderNo.setOrderNo(result.orderNo);
+
       return result;
     } else {
       throw Exception(
@@ -39,17 +44,26 @@ class CreateOrderService {
     }
   }
 
-  // ── Save orderNo ─────────────────────────────────────────────────
+  // ── Save orderNo to SharedPreferences ──────────────────────────
   Future<void> _saveOrderNo(int orderNo) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_orderNoPrefKey, orderNo);
     print('[CreateOrderService] orderNo $orderNo saved to SharedPreferences');
   }
 
-  // ── Read orderNo (use anywhere in the app) ───────────────────────
+  // ── Read orderNo from SharedPreferences ────────────────────────
   static Future<int?> getSavedOrderNo() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_orderNoPrefKey);
+  }
+
+  // ── Load orderNo from SharedPreferences to Global ───────────────
+  static Future<void> loadOrderNoFromPrefs() async {
+    final orderNo = await getSavedOrderNo();
+    if (orderNo != null && orderNo > 0) {
+      GlobalOrderNo.setOrderNo(orderNo);
+      print('[CreateOrderService] Loaded orderNo from SharedPreferences: $orderNo');
+    }
   }
 }
 

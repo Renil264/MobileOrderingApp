@@ -1,5 +1,8 @@
+// lib/core/api/social_login_service.dart
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:concession_tracker_ui/core/global_user.dart';
 import 'package:concession_tracker_ui/core/user_storage.dart';
 
 class SocialLoginService {
@@ -10,10 +13,11 @@ class SocialLoginService {
   Future<Map<String, dynamic>?> socialLogin({
     required String email,
     required String name,
-    required String provider, // 'google' or 'facebook'
+    required String provider,
     required String providerToken,
     required String? photoUrl,
     required String fcmToken,
+    required String uuid,
   }) async {
     try {
       final requestBody = {
@@ -23,15 +27,14 @@ class SocialLoginService {
         "providerToken": providerToken,
         "photoUrl": photoUrl ?? "",
         "fcmToken": fcmToken,
+        "uuid": uuid,
       };
 
       print('Social Login Request: $requestBody');
 
       final response = await http.post(
         Uri.parse(_baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       ).timeout(
         const Duration(seconds: 30),
@@ -44,17 +47,34 @@ class SocialLoginService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
 
-        // ================= SAVE TO EXISTING USER STORAGE =================
-        await UserStorage.saveSocialUser(
-          id: responseData['user_id'] ?? 0,
-          name: responseData['name'] ?? name,
+        final int userId    = responseData['user_id'] ?? 0;
+        final String uName  = responseData['name'] ?? name;
+
+        // ── Step 1: Write isLoggedIn=true + core user fields ─────
+        // GlobalUser.setUser() persists 'isLoggedIn'=true, 'userId',
+        // 'userName', 'userEmail' to SharedPreferences in one call.
+        // This is what SplashScreen._route() reads on next cold start
+        // to decide whether to go to MainShellPage or LoginPage.
+        await GlobalUser.setUser(
+          id:    userId,
+          name:  uName,
           email: email,
+        );
+
+        // ── Step 2: Write social-specific fields ─────────────────
+        // saveSocialUser writes FCM token, provider, photo URL, and
+        // also redundantly writes both isLoggedIn keys as a safety net.
+        await UserStorage.saveSocialUser(
+          id:       userId,
+          name:     uName,
+          email:    email,
           fcmToken: fcmToken,
           provider: provider,
           photoUrl: photoUrl,
+          uuid:     uuid,
         );
 
-        print('User data saved to UserStorage');
+        print('Social login saved — userId=$userId isLoggedIn=true');
         return responseData;
       } else {
         throw Exception(

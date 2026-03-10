@@ -1,15 +1,26 @@
-import 'package:quickalert/quickalert.dart';
+// lib/features/auth/presentation/pages/hamburger_page.dart
+
+
+import 'package:concession_tracker_ui/core/global_device.dart';
 import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/global_market.dart';
+
+import 'package:concession_tracker_ui/core/global_selected_item.dart';
 import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/globalconcession.dart';
+import 'package:concession_tracker_ui/core/globalmarketdata.dart';
+import 'package:concession_tracker_ui/core/user_storage.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/changepassword.dart';
-import 'package:concession_tracker_ui/features/auth/presentation/pages/login_form.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/personaldetails.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/select_market_page.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/switch_market_page.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/termsandconditions.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/widgets/login_page.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/widgets/select_market_form.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:quickalert/quickalert.dart';
 import '../../../../core/constants/app_colors.dart';
 
 class HamburgerPage extends StatelessWidget {
@@ -33,7 +44,6 @@ class HamburgerPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── HEADER ─────────────────────────────────────────
               Padding(
                 padding: EdgeInsets.all(screenWidth * 0.06),
                 child: Row(
@@ -51,9 +61,7 @@ class HamburgerPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            GlobalUser.name.isNotEmpty
-                                ? GlobalUser.name
-                                : 'User',
+                            GlobalUser.name.isNotEmpty ? GlobalUser.name : 'User',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: screenWidth * 0.045,
@@ -62,9 +70,7 @@ class HamburgerPage extends StatelessWidget {
                           ),
                           SizedBox(height: screenWidth * 0.01),
                           Text(
-                            GlobalUser.email.isNotEmpty
-                                ? GlobalUser.email
-                                : '',
+                            GlobalUser.email.isNotEmpty ? GlobalUser.email : '',
                             style: TextStyle(
                               color: Colors.white70,
                               fontSize: screenWidth * 0.032,
@@ -77,7 +83,6 @@ class HamburgerPage extends StatelessWidget {
                   ],
                 ),
               ),
-
               Expanded(
                 child: Container(
                   decoration: const BoxDecoration(
@@ -95,39 +100,27 @@ class HamburgerPage extends StatelessWidget {
                         _drawerMenuItem(context,
                             icon: Icons.store,
                             title: 'Switch Market',
-                            onTap: () => Navigator.push(
-                                context,
+                            onTap: () => Navigator.push(context,
                                 MaterialPageRoute(
-                                    builder: (_) =>
-                                        const SwitchMarketPage()))),
+                                    builder: (_) => const SelectMarketPage()))),
                         _drawerMenuItem(context,
                             icon: Icons.person_outline,
                             title: 'Personal Details',
-                            onTap: () => Navigator.push(
-                                context,
+                            onTap: () => Navigator.push(context,
                                 MaterialPageRoute(
-                                    builder: (_) =>
-                                        const PersonalDetailsScreen()))),
+                                    builder: (_) => const PersonalDetailsScreen()))),
                         _drawerMenuItem(context,
                             icon: Icons.lock_outline,
                             title: 'Change Password',
-                            onTap: () => Navigator.push(
-                                context,
+                            onTap: () => Navigator.push(context,
                                 MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ChangePasswordScreen()))),
-                        _drawerMenuItem(context,
-                            icon: Icons.credit_card,
-                            title: 'Credits',
-                            onTap: () {}),
+                                    builder: (_) => const ChangePasswordScreen()))),
                         _drawerMenuItem(context,
                             icon: Icons.description_outlined,
                             title: 'Terms and Conditions',
-                            onTap: () => Navigator.push(
-                                context,
+                            onTap: () => Navigator.push(context,
                                 MaterialPageRoute(
-                                    builder: (_) =>
-                                        const PrivacyPolicyPage()))),
+                                    builder: (_) => const PrivacyPolicyPage()))),
                         const SizedBox(height: 30),
                         Padding(
                           padding: EdgeInsets.all(screenWidth * 0.06),
@@ -135,14 +128,9 @@ class HamburgerPage extends StatelessWidget {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: () {
-                                // ── KEY FIX: capture root navigator BEFORE
-                                //    drawer is closed — this context remains
-                                //    valid after all overlays are dismissed ──
-                                final rootNav = Navigator.of(context,
-                                    rootNavigator: true);
-
-                                Navigator.of(context).pop(); // close drawer
-
+                                final rootNav =
+                                    Navigator.of(context, rootNavigator: true);
+                                Navigator.of(context).pop();
                                 WidgetsBinding.instance
                                     .addPostFrameCallback((_) {
                                   _showLogoutDialog(context, rootNav);
@@ -185,17 +173,14 @@ class HamburgerPage extends StatelessWidget {
     );
   }
 
-  Widget _drawerMenuItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _drawerMenuItem(BuildContext context,
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     final screenWidth = MediaQuery.of(context).size.width;
     return Padding(
       padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.06,
-          vertical: screenWidth * 0.015),
+          horizontal: screenWidth * 0.06, vertical: screenWidth * 0.015),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -212,8 +197,7 @@ class HamburgerPage extends StatelessWidget {
             child: Row(
               children: [
                 Icon(icon,
-                    color: AppColors.gradientTop,
-                    size: screenWidth * 0.055),
+                    color: AppColors.gradientTop, size: screenWidth * 0.055),
                 SizedBox(width: screenWidth * 0.04),
                 Expanded(
                   child: Text(title,
@@ -233,7 +217,6 @@ class HamburgerPage extends StatelessWidget {
 
   void _showLogoutDialog(BuildContext context, NavigatorState rootNav) {
     final screenWidth = MediaQuery.of(context).size.width;
-
     showDialog(
       context: context,
       barrierColor: Colors.black54,
@@ -268,10 +251,7 @@ class HamburgerPage extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Colors.red.shade600,
-                          Colors.red.shade400
-                        ],
+                        colors: [Colors.red.shade600, Colors.red.shade400],
                       ),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(25),
@@ -287,8 +267,7 @@ class HamburgerPage extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(Icons.logout,
-                              color: Colors.white,
-                              size: screenWidth * 0.12),
+                              color: Colors.white, size: screenWidth * 0.12),
                         ),
                         SizedBox(height: screenWidth * 0.03),
                         Text('Logout',
@@ -365,7 +344,6 @@ class HamburgerPage extends StatelessWidget {
   }
 }
 
-// ── LOGOUT BUTTON ─────────────────────────────────────────────────────
 class _LogoutButton extends StatefulWidget {
   final double screenWidth;
   final BuildContext dialogContext;
@@ -385,80 +363,83 @@ class _LogoutButtonState extends State<_LogoutButton> {
   bool _isLoading = false;
 
   Future<void> _performLogout() async {
-  if (!mounted) return;
-  setState(() => _isLoading = true);
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-  try {
-    final response = await http
-        .post(
-          Uri.parse(
-              'http://192.168.10.144/ConcessionTracker/api/Users/logout'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'email': GlobalUser.email,
-            'fcmToken': GlobalFCM.token,
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
+    try {
+      final response = await http
+          .post(
+            Uri.parse(
+                'http://192.168.10.144/ConcessionTracker/api/Users/logout'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': GlobalUser.email,
+              'fcmToken': GlobalFCM.token,
+              'uuid': GlobalDevice.deviceId,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
-    print('[Logout] Status: ${response.statusCode}');
-    print('[Logout] Body  : ${response.body}');
+      print('[Logout] Status: ${response.statusCode}');
+      print('[Logout] Body  : ${response.body}');
 
-    if (response.statusCode == 200) {
-      // 1. Clear user state
-      GlobalUser.clear();
+      if (response.statusCode == 200) {
+        // ── Clear ALL persisted state ──────────────────────────────
+        // Every SharedPreferences key written during the session is
+        // wiped here so SplashScreen._route() sees isLoggedIn=false
+        // on the next cold start and routes to LoginPage.
+        await GlobalUser.clear();         // userId, userName, userEmail → isLoggedIn=false
+        await UserStorage.clearUser();    // user_id, user_name, user_email
+        await GlobalMarket.clear();       // marketName
+        await GlobalMarketData.clear();   // marketId
+        await GlobalConcession.clear();   // concessionName, concessionCategoryId
+        await GlobalSelectedItem.clear(); // selectedItemId, selectedCategoryId, selectedConcessionId
 
-      // 2. Close dialog
+        if (Navigator.canPop(widget.dialogContext)) {
+          Navigator.pop(widget.dialogContext);
+        }
+
+        await Future.delayed(const Duration(milliseconds: 90));
+
+        // Remove every route so back button cannot bypass login
+        widget.rootNav.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      } else {
+        if (Navigator.canPop(widget.dialogContext)) {
+          Navigator.pop(widget.dialogContext);
+        }
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (mounted) {
+          QuickAlert.show(
+            context: widget.rootNav.context,
+            type: QuickAlertType.error,
+            title: 'Logout Failed',
+            text: 'Something went wrong. Please try again.',
+            confirmBtnColor: Colors.red,
+          );
+        }
+      }
+    } catch (e) {
+      print('[Logout] Exception: $e');
       if (Navigator.canPop(widget.dialogContext)) {
         Navigator.pop(widget.dialogContext);
       }
-
-      await Future.delayed(const Duration(milliseconds: 90));
-
-      // 3. Navigate to Login
-      widget.rootNav.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-        (route) => false,
-      );
-    } else {
-      if (Navigator.canPop(widget.dialogContext)) {
-        Navigator.pop(widget.dialogContext);
-      }
-
       await Future.delayed(const Duration(milliseconds: 200));
-
       if (mounted) {
         QuickAlert.show(
           context: widget.rootNav.context,
           type: QuickAlertType.error,
-          title: 'Logout Failed',
-          text: 'Something went wrong. Please try again.',
+          title: 'Connection Error',
+          text: 'Could not reach the server. Please check your connection.',
           confirmBtnColor: Colors.red,
         );
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  } catch (e) {
-    print('[Logout] Exception: $e');
-
-    if (Navigator.canPop(widget.dialogContext)) {
-      Navigator.pop(widget.dialogContext);
-    }
-
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    if (mounted) {
-      QuickAlert.show(
-        context: widget.rootNav.context,
-        type: QuickAlertType.error,
-        title: 'Connection Error',
-        text: 'Could not reach the server. Please check your connection.',
-        confirmBtnColor: Colors.red,
-      );
-    }
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   @override
   Widget build(BuildContext context) {

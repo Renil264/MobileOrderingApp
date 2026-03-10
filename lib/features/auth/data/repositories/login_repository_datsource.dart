@@ -12,11 +12,13 @@ class LoginRepositoryImpl implements LoginRepository {
     required String email,
     required String password,
     required String fcmToken,
+    required String uuid
   }) {
     return remoteDatasource.login(
       email: email,
       password: password,
       fcmToken: fcmToken,
+      uuid: uuid
     );
   }
 }

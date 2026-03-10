@@ -20,14 +20,20 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: event.email,
         password: event.password,
         fcmToken: event.fcmToken,
+        uuid: event.uuid
       );
 
-      // 1. Set GlobalUser so it's available immediately in-memory
-      GlobalUser.name = result.name;
-      GlobalUser.email = event.email;
-      GlobalUser.id = result.userId;
+      // Persist user + write isLoggedIn=true to SharedPreferences.
+      // GlobalUser.setUser() covers both in-memory and SP in one call,
+      // so SplashScreen._route() will see isLoggedIn=true on next cold start.
+      await GlobalUser.setUser(
+        id: result.userId,
+        name: result.name,
+        email: event.email,
+      );
 
-      // 2. Persist to storage for future sessions
+      // Also write UserStorage keys (user_id / user_name / user_email)
+      // so UserStorage.isLoggedIn() and loadUser() continue to work.
       await UserStorage.saveUser(
         id: result.userId,
         name: result.name,

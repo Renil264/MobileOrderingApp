@@ -1,54 +1,35 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_text_styles.dart';
 
-class RememberMeRow extends StatefulWidget {
-  const RememberMeRow({super.key});
+class RememberMeRow extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-  @override
-  State<RememberMeRow> createState() => _RememberMeRowState();
-}
-
-class _RememberMeRowState extends State<RememberMeRow> {
-  bool rememberMe = false;
+  const RememberMeRow({
+    super.key,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              rememberMe = !rememberMe;
-            });
-          },
-          child: Icon(
-            rememberMe
-                ? Icons.check_box
-                : Icons.check_box_outline_blank,
-            size: 18,
-            color: AppColors.white,
+        SizedBox(
+          height: 24,
+          width: 24,
+          child: Checkbox(
+            value: value,
+            onChanged: (val) => onChanged(val ?? false),
+            activeColor: AppColors.greenCTA,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
         ),
         const SizedBox(width: 8),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              rememberMe = !rememberMe;
-            });
-          },
-          child: const Text(
-            'Remember me',
-            style: TextStyle(color: AppColors.white),
-          ),
-        ),
-        const Spacer(),
-        const Text(
-          'Forgot password',
-          style: TextStyle(
-            color: AppColors.appleBlack,
-            decoration: TextDecoration.underline,
-          ),
-        ),
+        const Text('Remember Me', style: AppTextStyles.subHeading),
       ],
     );
   }

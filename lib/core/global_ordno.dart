@@ -1,25 +1,27 @@
-import 'package:shared_preferences/shared_preferences.dart';
+// Global Order Number Storage
+class GlobalOrderNo {
+  static int _orderNo = 0;
 
-class Ordno {
-  static int? orderno;
-
-  /// Set order number (memory + storage)
-  static Future<void> set(int value) async {
-    orderno = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt("orderNo", value);
+  /// Set the order number globally
+  static void setOrderNo(int orderNo) {
+    _orderNo = orderNo;
+    print('[GlobalOrderNo] Order No set to: $_orderNo');
   }
 
-  /// Restore order number from storage
-  static Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    orderno = prefs.getInt("orderNo");
+  /// Get the order number globally
+  static int get orderNo => _orderNo;
+
+  /// Check if order number is available
+  static bool get hasOrderNo => _orderNo > 0;
+
+  /// Clear the order number (use when order is completed)
+  static void clearOrderNo() {
+    _orderNo = 0;
+    print('[GlobalOrderNo] Order No cleared');
   }
 
-  /// Clear order number
-  static Future<void> clear() async {
-    orderno = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("orderNo");
+  /// Reset to default
+  static void reset() {
+    _orderNo = 0;
   }
 }

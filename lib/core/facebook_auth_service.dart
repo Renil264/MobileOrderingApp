@@ -7,14 +7,14 @@ class FacebookAuthService {
   /// Login with Facebook (NO Firebase)
   static Future<bool> login() async {
         try {
-      debugPrint('🔵 Facebook login started');
+      debugPrint('Facebook login started');
 
       final LoginResult result = await FacebookAuth.instance.login(
         permissions: ['email', 'public_profile'],
       );
 
       if (result.status != LoginStatus.success) {
-        debugPrint('❌ Facebook login cancelled or failed');
+        debugPrint('Facebook login cancelled or failed');
         return false;
       }
 
@@ -36,7 +36,7 @@ class FacebookAuthService {
       // ✅ DEBUG OUTPUT
       AuthSession.debugPrintSession();
 
-      debugPrint('✅ Facebook login success');
+      debugPrint(' Facebook login success');
       return true;
     }catch (e) {
       debugPrint('Facebook login error: $e');

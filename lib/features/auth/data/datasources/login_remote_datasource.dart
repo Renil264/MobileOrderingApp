@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import '../../domain/entities/login_entity.dart';
@@ -10,7 +11,8 @@ class LoginRemoteDatasource {
   Future<LoginEntity> login({
     required String email,
     required String password,
-    required String fcmToken,
+    required String fcmToken, 
+    required String uuid,
   }) async {
     final response = await http.post(
       Uri.parse(baseUrl),
@@ -19,6 +21,7 @@ class LoginRemoteDatasource {
         "email": email,
         "password": password,
         "fcmToken": fcmToken,
+        "uuid": uuid
       }),
     );
 

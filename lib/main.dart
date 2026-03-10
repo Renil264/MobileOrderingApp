@@ -1,40 +1,43 @@
+import 'package:concession_tracker_ui/core/global_device.dart';
 import 'package:concession_tracker_ui/core/global_fcm.dart';
+import 'package:concession_tracker_ui/core/global_market.dart';
 import 'package:concession_tracker_ui/core/global_ordno.dart';
+import 'package:concession_tracker_ui/core/global_selected_item.dart';
+import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/globalconcession.dart';
+import 'package:concession_tracker_ui/core/globalmarketdata.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/splash_screen.dart';
 import 'package:concession_tracker_ui/core/user_storage.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionlist/concession_bloc.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/bloc/concessionlist/concession_event.dart';
+import 'package:concession_tracker_ui/features/auth/presentation/pages/main_page.dart';
 import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:concession_tracker_ui/notification.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'features/auth/presentation/widgets/login_page.dart';
+
 import 'firebase_options.dart';
 
-/// 🌍 Global FCM Token
 String? globalFcmToken;
 
-/// Background message handler
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   NotificationService().showNotification(message);
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Ordno.load();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await GlobalDevice.init();
 
-  FirebaseMessaging.onBackgroundMessage(
-    _firebaseMessagingBackgroundHandler,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   final notificationService = NotificationService();
   await notificationService.init();
@@ -45,17 +48,15 @@ Future<void> main() async {
     sound: true,
   );
 
-  /// 🔥 Fetch FCM Token
-final token = await FirebaseMessaging.instance.getToken();
+  final token = await FirebaseMessaging.instance.getToken();
+  GlobalFCM.token = token;
+  debugPrint('FCM Token: ${GlobalFCM.token}');
+  debugPrint('Device ID: ${GlobalDevice.deviceId}');
 
-GlobalFCM.token = token;
 
-debugPrint('FCM Token Saved Globally: ${GlobalFCM.token}');
-
-  /// 🔄 Auto update if token changes
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
     globalFcmToken = newToken;
-    debugPrint('🔄 FCM Token Refreshed: $globalFcmToken');
+    debugPrint('FCM Token Refreshed: $globalFcmToken');
   });
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -68,15 +69,35 @@ debugPrint('FCM Token Saved Globally: ${GlobalFCM.token}');
     ),
   );
 
+  // Restore all persisted state before DI wires up
   await UserStorage.loadUser();
+  await GlobalUser.loadFromStorage();
+  await GlobalMarket.loadFromStorage();
+  await GlobalMarketData.loadFromStorage();
+  await GlobalConcession.loadFromStorage();
+  await GlobalSelectedItem.loadFromStorage();
   await setupLocator();
-  
 
-  runApp(const MyApp());
+  // Decide which screen to open
+  final loggedInA = await UserStorage.isLoggedIn();
+  final loggedInB = await GlobalUser.isLoggedIn();
+  final isLoggedIn = loggedInA || loggedInB;
+  final hasUser    = GlobalUser.id != 0 && GlobalUser.name.isNotEmpty;
+  final hasMarket  = GlobalMarket.marketName.isNotEmpty;
+
+  debugPrint('══════════════════════════════');
+  debugPrint('[Startup] isLoggedIn : $isLoggedIn');
+  debugPrint('[Startup] hasUser    : $hasUser  (id=${GlobalUser.id})');
+  debugPrint('[Startup] hasMarket  : $hasMarket ("${GlobalMarket.marketName}")');
+  debugPrint('[Startup] marketId   : ${GlobalMarketData.marketId}');
+  debugPrint('══════════════════════════════');
+
+  runApp(MyApp(skipToHome: isLoggedIn && hasUser && hasMarket));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool skipToHome;
+  const MyApp({super.key, required this.skipToHome});
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +114,17 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(fontFamily: 'DM Sans'),
         ),
       ),
-      home: const LoginPage(),
+      // skipToHome=true  -> user was logged in + market selected -> go straight to app
+      // skipToHome=false -> fresh install or logged out         -> show login
+      home: SplashScreen()
+    );
+  }
+
+  Widget _homeWithBloc() {
+    return BlocProvider(
+      create: (_) => sl<ConcessionBloc>()
+        ..add(FetchConcessions(GlobalMarket.marketName)),
+      child: const MainShellPage(),
     );
   }
 }

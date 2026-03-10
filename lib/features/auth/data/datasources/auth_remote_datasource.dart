@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:concession_tracker_ui/core/global_device.dart';
 import 'package:concession_tracker_ui/features/auth/data/model/user_model.dart';
 import 'package:concession_tracker_ui/core/global_fcm.dart';
 import 'package:http/http.dart' as http;
@@ -33,7 +34,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         "email": email,
         "password": password,
         "phoneNumber": phoneNumber, // API expects number
-        "fcmToken": GlobalFCM.token, // ✅ fetch globally
+        "fcmToken": GlobalFCM.token,
+        "uuid" : GlobalDevice.deviceId
       }),
     );
 

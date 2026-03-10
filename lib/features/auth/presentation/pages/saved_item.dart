@@ -1,11 +1,14 @@
 import 'package:concession_tracker_ui/core/api/saved_item_api.dart';
-import 'package:concession_tracker_ui/core/global_market.dart';
+import 'package:concession_tracker_ui/core/global_selected_item.dart';
 import 'package:concession_tracker_ui/core/global_user.dart';
+import 'package:concession_tracker_ui/core/globalmarketdata.dart';
 import 'package:concession_tracker_ui/core/models/saved_items_model.dart';
 import 'package:concession_tracker_ui/features/auth/presentation/pages/order_summary_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../../../core/constants/app_colors.dart';
-
 
 class SavedScreen extends StatefulWidget {
   const SavedScreen({super.key});
@@ -20,8 +23,7 @@ class _SavedScreenState extends State<SavedScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
-  // TODO: Replace these with actual user and market IDs from your auth/session
-  final int _marketId = GlobalMarket.marketId;
+  final int _marketId = GlobalMarketData.marketId;
   final int _userId = GlobalUser.id;
 
   @override
@@ -41,7 +43,7 @@ class _SavedScreenState extends State<SavedScreen> {
         marketId: _marketId,
         userId: _userId,
       );
-      
+
       if (mounted) {
         setState(() {
           _savedItems = items;
@@ -55,6 +57,119 @@ class _SavedScreenState extends State<SavedScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _unsaveItem({
+    required int concessionId,
+    required int itemId,
+    required int customerId,
+    required SavedItemModel item,
+  }) async {
+    try {
+      // Call unsave API
+      await _unsaveItemApi(
+        concessionId: concessionId,
+        itemId: itemId,
+        customerId: customerId,
+      );
+
+      // Remove from local list
+      setState(() {
+        _savedItems.removeWhere((i) => i.itemId == itemId);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${item.itemName} removed from saved',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Failed to remove item: $errorMessage',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _unsaveItemApi({
+    required int concessionId,
+    required int itemId,
+    required int customerId,
+  }) async {
+    const String baseUrl = 'http://192.168.10.144/ConcessionTracker/api';
+    final String endpoint = '$baseUrl/Users/unsave-item';
+
+    try {
+      print('══════════════════════════════════════');
+      print('[UNSAVE] Calling API...');
+      print('endpoint     : $endpoint');
+      print('concessionId : $concessionId');
+      print('itemId       : $itemId');
+      print('customerId   : $customerId');
+      print('══════════════════════════════════════');
+
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'concessionId': concessionId,
+          'itemId': itemId,
+          'customerId': customerId,
+        }),
+      );
+
+      print('[UNSAVE] Response status: ${response.statusCode}');
+      print('[UNSAVE] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final message = responseData['message'] ?? 'Item unsaved successfully';
+        print('[UNSAVE] Success: $message');
+      } else {
+        throw Exception('Failed to unsave item. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('[UNSAVE] Error: $e');
+      throw Exception(e.toString());
     }
   }
 
@@ -115,67 +230,47 @@ class _SavedScreenState extends State<SavedScreen> {
       onRefresh: _loadSavedItems,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        child: GridView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: _savedItems.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.75,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _savedItems.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.78,
+          itemBuilder: (context, index) {
+            return _SavedFoodCard(
+              item: _savedItems[index],
+              onUnsave: () => _unsaveItem(
+                concessionId: GlobalSelectedItem.concessionId,
+                itemId: _savedItems[index].itemId,
+                customerId: GlobalUser.id,
+                item: _savedItems[index],
               ),
-              itemBuilder: (context, index) {
-                return _SavedFoodCard(
-                  item: _savedItems[index],
-                );
-              },
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _SavedFoodCard extends StatelessWidget {
+class _SavedFoodCard extends StatefulWidget {
   final SavedItemModel item;
+  final VoidCallback onUnsave;
 
-  const _SavedFoodCard({required this.item});
+  const _SavedFoodCard({
+    required this.item,
+    required this.onUnsave,
+  });
 
-  String _getImageUrl() {
-    // You can map categoryId or itemName to specific images
-    // For now, using generic food images based on item name
-    final itemNameLower = item.itemName.toLowerCase();
-    
-    if (itemNameLower.contains('bacon')) {
-      return 'https://images.unsplash.com/photo-1528607929212-2636ec44253e?w=400';
-    } else if (itemNameLower.contains('fudge')) {
-      return 'https://images.unsplash.com/photo-1586985289688-ca3cf47d3e6e?w=400';
-    } else if (itemNameLower.contains('pizza')) {
-      return 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=400';
-    } else if (itemNameLower.contains('burger')) {
-      return 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400';
-    } else if (itemNameLower.contains('taco')) {
-      return 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400';
-    } else {
-      // Default food image
-      return 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400';
-    }
-  }
+  @override
+  State<_SavedFoodCard> createState() => _SavedFoodCardState();
+}
+
+class _SavedFoodCardState extends State<_SavedFoodCard> {
+  bool _isRemoving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -185,8 +280,8 @@ class _SavedFoodCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
@@ -194,8 +289,9 @@ class _SavedFoodCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Food image
+          // Restaurant SVG image - Better sizing
           Expanded(
+            flex: 7,
             child: Stack(
               children: [
                 ClipRRect(
@@ -205,48 +301,43 @@ class _SavedFoodCard extends StatelessWidget {
                   ),
                   child: SizedBox(
                     width: double.infinity,
-                    child: Image.network(
-                      _getImageUrl(),
+                    height: double.infinity,
+                    child: SvgPicture.asset(
+                      'assets/food_icon.svg',
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
+                      placeholderBuilder: (BuildContext context) {
                         return Container(
                           color: const Color(0xFFEEEEEE),
                           child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
                           ),
                         );
                       },
-                      errorBuilder: (_, __, ___) => Container(
-                        color: const Color(0xFFEEEEEE),
-                        child: const Icon(
-                          Icons.fastfood,
-                          size: 36,
-                          color: Colors.grey,
-                        ),
-                      ),
                     ),
                   ),
                 ),
                 // Concession name badge
                 Positioned(
-                  top: 8,
-                  left: 8,
+                  top: 10,
+                  left: 10,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 12,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withOpacity(0.75),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      item.concessionName,
+                      widget.item.concessionName,
                       style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
+                        letterSpacing: 0.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -257,29 +348,28 @@ class _SavedFoodCard extends StatelessWidget {
             ),
           ),
 
-          // Name + price row
+          // Name + price section
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    item.itemName,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.appleBlack,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 4),
                 Text(
-                  '\$${item.itemPrice.toStringAsFixed(2)}',
+                  widget.item.itemName,
                   style: const TextStyle(
                     fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.appleBlack,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '\$${widget.item.itemPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.appleBlack,
                   ),
@@ -288,49 +378,104 @@ class _SavedFoodCard extends StatelessWidget {
             ),
           ),
 
-          // ADD button
+          // ADD + UNSAVE button row
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => OrderSummaryPage(),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.gradientTop,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.gradientTop.withOpacity(0.35),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Row(
+              children: [
+                // ADD button
+                Expanded(
+                  flex: 3,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const OrderSummaryPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.gradientTop,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gradientTop.withOpacity(0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'ADD',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-                child: const Center(
-                  child: Text(
-                    'ADD',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.white,
-                      letterSpacing: 0.5,
+                const SizedBox(width: 10),
+                // UNSAVE button (heart icon)
+                GestureDetector(
+                  onTap: _isRemoving ? null : _handleUnsave,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _isRemoving
+                          ? Colors.red.withOpacity(0.2)
+                          : Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.red.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: _isRemoving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation(Colors.red),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.favorite,
+                              color: Colors.red,
+                              size: 18,
+                            ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _handleUnsave() async {
+    setState(() => _isRemoving = true);
+    try {
+      widget.onUnsave();
+    } finally {
+      if (mounted) {
+        setState(() => _isRemoving = false);
+      }
+    }
   }
 }
 

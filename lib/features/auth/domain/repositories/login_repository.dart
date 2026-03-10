@@ -5,5 +5,6 @@ abstract class LoginRepository {
     required String email,
     required String password,
     required String fcmToken,
+    required String uuid
   });
 }

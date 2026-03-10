@@ -1,3 +1,5 @@
+
+
 import '../entities/login_entity.dart';
 import '../repositories/login_repository.dart';
 
@@ -10,11 +12,13 @@ class LoginUseCase {
     required String email,
     required String password,
     required String fcmToken,
+    required String uuid
   }) {
     return repository.login(
       email: email,
       password: password,
       fcmToken: fcmToken,
+      uuid: uuid
     );
   }
 }

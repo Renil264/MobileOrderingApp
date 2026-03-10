@@ -16,6 +16,7 @@ import 'package:concession_tracker_ui/features/auth/presentation/pages/order_sum
 import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 
 // ── Import the order service ───────────────────────────────────────
@@ -610,15 +611,17 @@ class _StoreMenuPageState extends State<StoreMenuPage> {
                       child: SizedBox(
                         width: double.infinity,
                         height: double.infinity,
-                        child: Image.asset(
-                          'assets/burger.png',
+                        child: SvgPicture.asset(
+                          'assets/food_icon.svg',
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey.shade300,
-                            child: Icon(Icons.fastfood,
-                                size: isTablet ? 60 : 48,
-                                color: Colors.grey.shade500),
-                          ),
+                          placeholderBuilder: (BuildContext context) {
+                            return Container(
+                              color: Colors.grey.shade300,
+                              child: Icon(Icons.fastfood,
+                                  size: isTablet ? 60 : 48,
+                                  color: Colors.grey.shade500),
+                            );
+                          },
                         ),
                       ),
                     ),

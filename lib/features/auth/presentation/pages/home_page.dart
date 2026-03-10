@@ -18,6 +18,7 @@ import 'package:concession_tracker_ui/features/auth/presentation/pages/store_men
 import 'package:concession_tracker_ui/injection_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../core/constants/app_colors.dart';
 
 class HomePageWrapper extends StatelessWidget {
@@ -47,11 +48,16 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
     _offerPageController = PageController();
     _startAutoScroll();
+
     _searchController = TextEditingController();
     _searchController.addListener(
-        () => setState(() => _searchQuery = _searchController.text.toLowerCase()));
+      () => setState(() => _searchQuery = _searchController.text.toLowerCase()),
+    );
+
+    // ✅ Blocs will be triggered in build() via MultiBlocProvider
   }
 
   void _startAutoScroll() {
@@ -371,9 +377,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // STORE LIST
-  // ─────────────────────────────────────────────────────────────────
   Widget _storeList(BuildContext context, double sw, double sh,
       {required List<String> names}) {
     if (_showAllStores) {
@@ -409,9 +412,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // UTILITY WIDGETS
-  // ─────────────────────────────────────────────────────────────────
   Widget _errorWidget(double sw,
       {required String message, required VoidCallback onRetry}) {
     return Padding(
@@ -472,9 +472,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // HEADER
-  // ─────────────────────────────────────────────────────────────────
   Widget _header(BuildContext context, double sw) {
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -558,9 +555,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // SEARCH
-  // ─────────────────────────────────────────────────────────────────
   Widget _search(double sw) {
     return Padding(
       padding: EdgeInsets.fromLTRB(sw * 0.04, sw * 0.04, sw * 0.04, 0),
@@ -730,7 +724,7 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(
               builder: (_) => StoreMenuPage(
-                  storeName: name, storeImage: 'assets/store_1.png'))),
+                  storeName: name, storeImage: 'assets/restaurant.svg'))),
       child: Container(
         width: width,
         height: height,
@@ -752,7 +746,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     bottomLeft: Radius.circular(20)),
-                child: Image.asset('assets/store_1.png',
+                child: SvgPicture.asset('assets/restaurant.svg',
                     fit: BoxFit.cover, height: double.infinity),
               ),
             ),
@@ -818,7 +812,7 @@ class _HomePageState extends State<HomePage> {
           context,
           MaterialPageRoute(
               builder: (_) => StoreMenuPage(
-                  storeName: name, storeImage: 'assets/store_1.png'))),
+                  storeName: name, storeImage: 'assets/restaurant.svg'))),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -836,7 +830,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   bottomLeft: Radius.circular(20)),
-              child: Image.asset('assets/store_1.png',
+              child: SvgPicture.asset('assets/restaurant.svg',
                   width: sw * 0.35, height: sw * 0.35, fit: BoxFit.cover),
             ),
             Expanded(
